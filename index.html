@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>House Pool Log</title>
+
+  <!-- Supabase client -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      padding: 16px;
+      max-width: 500px;
+      margin: auto;
+    }
+    h2 { margin-top: 24px; }
+    button {
+      width: 100%;
+      padding: 14px;
+      font-size: 18px;
+      margin-top: 8px;
+    }
+    button:disabled { opacity: 0.4; }
+    select, input {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      margin-top: 6px;
+    }
+    .row { margin-bottom: 12px; }
+    .win-btn { font-weight: bold; }
+    .tally {
+      background: #f4f4f4;
+      padding: 12px;
+      border-radius: 6px;
+    }
+    .date-label {
+      font-size: 15px;
+      color: #555;
+      margin-bottom: 6px;
+    }
+    .past-day {
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 8px;
+      margin-bottom: 8px;
+    }
+    .admin-banner {
+      background: #222;
+      color: #fff;
+      padding: 6px;
+      text-align: center;
+      display: none;
+      font-size: 13px;
+    }
+  </style>
+</head>
+
+<body>
+
+<div id="adminBanner" class="admin-banner">ADMIN MODE</div>
+
+<h1>🎱 House Pool Log</h1>
+
+<div class="row">
+  <h2>Add Player</h2>
+  <input id="newPlayer" placeholder="Player name"/>
+  <button onclick="addPlayer()">Add Player</button>
+</div>
+
+<div class="row">
+  <h2>At the Table</h2>
+  <select id="player1" onchange="updateState()"></select>
+  <select id="player2" onchange="updateState()"></select>
+</div>
+
+<div class="row">
+  <h2>Log Win</h2>
+  <button class="win-btn" id="p1WinBtn" onclick="logWin(1)" disabled>Player 1 Won</button>
+  <button class="win-btn" id="p2WinBtn" onclick="logWin(2)" disabled>Player 2 Won</button>
+
+  <select id="endCondition">
+    <option value="">(Optional) End Condition</option>
+    <option>Clean win</option>
+    <option>Opponent scratched on 8</option>
+    <option>Opponent sank 8 early</option>
+    <option>Opponent missed 8</option>
+  </select>
+
+  <button onclick="undoLastGame()">Undo Last Game</button>
+</div>
+
+<div class="row">
+  <h2>Today</h2>
+  <div class="date-label" id="todayLabel"></div>
+  <div class="tally" id="tally"></div>
+</div>
+
+<div class="row">
+  <h2>Past Days</h2>
+  <div id="pastDays"></div>
+</div>
+
+<script>
+  /* 🔑 SUPABASE CONFIG (ALREADY FILLED IN) */
+  const SUPABASE_URL = "https://wybycecwkvrukcfoqgpa.supabase.co";
+  const SUPABASE_KEY =
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind5YnljZWN3a3ZydWtjZm9xZ3BhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5NTc2MTksImV4cCI6MjA4MjUzMzYxOX0.nagtzOiCuUvRnkxKbVVmQ-ycYpWaA2e-3nHjYF3L0UU";
+
+  const supabase = supabaseJs.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  const today = new Date().toISOString().slice(0,10);
+  document.getElementById("todayLabel").textContent =
+    new Date().toLocaleDateString(undefined, {
+      weekday: "long",
+      month: "short",
+      day: "numeric",
+      year: "numeric"
+    });
+
+  let players = [];
+  let games = [];
+  let adminMode = false;
+
+  async function loadData() {
+    const p = await supabase.from("players").select("name");
+    players = p.data?.map(x => x.name) || [];
+
+    const g = await supabase.from("games").select("*");
+    games = g.data || [];
+
+    refreshUI();
+    refreshAll();
+  }
+
+  async function addPlayer() {
+    const name = newPlayer.value.trim();
+    if (!name || players.includes(name)) return;
+    await supabase.from("players").insert({ name });
+    newPlayer.value = "";
+    loadData();
+  }
+
+  async function logWin(which) {
+    if (!player1.value || !player2.value) return;
+    await supabase.from("games").insert({
+      date: today,
+      winner: which === 1 ? player1.value : player2.value,
+      loser: which === 1 ? player2.value : player1.value,
+      end_condition: endCondition.value || null
+    });
+    endCondition.value = "";
+    loadData();
+  }
+
+  async function undoLastGame() {
+    const todayGames = games.filter(g => g.date === today);
+    if (!todayGames.length) return;
+    await supabase.from("games").delete().eq("id", todayGames.at(-1).id);
+    loadData();
+  }
+
+  function refreshUI() {
+    [player1, player2].forEach(sel => {
+      sel.innerHTML = "<option value=''>Select player</option>";
+      players.forEach(p => sel.add(new Option(p, p)));
+    });
+    updateState();
+  }
+
+  function refreshTally() {
+    tally.innerHTML = "";
+    const map = {};
+    games.filter(g => g.date === today).forEach(g => {
+      map[g.winner] = (map[g.winner] || 0) + 1;
+    });
+    Object.entries(map).forEach(([n,c]) => {
+      const d = document.createElement("div");
+      d.textContent = `${n}: ${c}`;
+      tally.appendChild(d);
+    });
+    if (!Object.keys(map).length) tally.textContent = "No games logged today.";
+  }
+
+  function refreshPastDays() {
+    pastDays.innerHTML = "";
+    games.filter(g => g.date !== today).forEach(g => {
+      const d = document.createElement("div");
+      d.className = "past-day";
+      d.textContent = `${g.date}: ${g.winner} beat ${g.loser}`;
+      pastDays.appendChild(d);
+    });
+    if (!pastDays.innerHTML) pastDays.textContent = "No past days yet.";
+  }
+
+  function refreshAll() {
+    refreshTally();
+    refreshPastDays();
+  }
+
+  function updateState() {
+    p1WinBtn.textContent = player1.value ? `${player1.value} Won` : "Player 1 Won";
+    p2WinBtn.textContent = player2.value ? `${player2.value} Won` : "Player 2 Won";
+    const ok = player1.value && player2.value && player1.value !== player2.value;
+    p1WinBtn.disabled = !ok;
+    p2WinBtn.disabled = !ok;
+  }
+
+  document.addEventListener("keydown", e => {
+    if (e.ctrlKey && e.shiftKey && e.key === "A") {
+      adminMode = !adminMode;
+      adminBanner.style.display = adminMode ? "block" : "none";
+    }
+  });
+
+  loadData();
+</script>
+
+</body>
+</html>
