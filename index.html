@@ -12,63 +12,23 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 
   <style>
-    body {
-      font-family: system-ui, sans-serif;
-      padding: 16px;
-      max-width: 500px;
-      margin: auto;
-    }
+    body { font-family: system-ui, sans-serif; padding: 16px; max-width: 500px; margin: auto; }
     h2 { margin-top: 24px; }
-    button {
-      width: 100%;
-      padding: 14px;
-      font-size: 18px;
-      margin-top: 8px;
-    }
+    button { width: 100%; padding: 14px; font-size: 18px; margin-top: 8px; }
     button:disabled { opacity: 0.4; }
-    select, input {
-      width: 100%;
-      padding: 10px;
-      font-size: 16px;
-      margin-top: 6px;
-    }
+    select, input { width: 100%; padding: 10px; font-size: 16px; margin-top: 6px; }
     .row { margin-bottom: 12px; }
     .win-btn { font-weight: bold; }
-    .tally {
-      background: #f4f4f4;
-      padding: 12px;
-      border-radius: 6px;
-    }
+    .tally { background: #f4f4f4; padding: 12px; border-radius: 6px; }
     .date-label { font-size: 15px; color: #555; }
-    .past-day {
-      border-bottom: 1px solid #ddd;
-      padding-bottom: 8px;
-      margin-bottom: 8px;
-    }
-    .admin-banner {
-      background: #222;
-      color: #fff;
-      padding: 6px;
-      text-align: center;
-      display: none;
-      font-size: 13px;
-    }
-    .qr-box {
-      text-align: center;
-      margin-top: 24px;
-      padding-top: 16px;
-      border-top: 1px dashed #ccc;
-    }
-    .qr-note {
-      font-size: 14px;
-      color: #555;
-      margin-top: 8px;
-    }
+    .past-day { border-bottom: 1px solid #ddd; padding-bottom: 8px; margin-bottom: 8px; }
+    .admin-banner { background: #222; color: #fff; padding: 6px; text-align: center; display: none; font-size: 13px; }
+    .qr-box { text-align: center; margin-top: 24px; padding-top: 16px; border-top: 1px dashed #ccc; }
+    .qr-note { font-size: 14px; color: #555; margin-top: 8px; }
   </style>
 </head>
 
 <body>
-
 <div id="adminBanner" class="admin-banner">ADMIN MODE</div>
 
 <h1>🎱 House Pool Log</h1>
@@ -122,17 +82,21 @@
 (() => {
   "use strict";
 
+  /* ================= CONFIG ================= */
   const APP_URL = "https://pr3am0h.github.io/house-pool-log/";
   const SUPABASE_URL = "https://wybycecwkvrukcfoqgpa.supabase.co";
-  const SUPABASE_KEY = "YOUR_ANON_KEY";
+  const SUPABASE_KEY =
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind5YnljZWN3a3ZydWtjZm9xZ3BhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5NTc2MTksImV4cCI6MjA4MjUzMzYxOX0.nagtzOiCuUvRnkxKbVVmQ-ycYpWaA2e-3nHjYF3L0UU";
 
   if (!window.supabase?.createClient) {
-    alert("Supabase failed to load.");
+    console.error("Supabase CDN not loaded.");
+    alert("Supabase failed to load. Please refresh.");
     return;
   }
 
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+  /* ================= DOM ================= */
   const el = {
     adminBanner: document.getElementById("adminBanner"),
     newPlayer: document.getElementById("newPlayer"),
@@ -149,45 +113,73 @@
     qrcode: document.getElementById("qrcode"),
   };
 
-  const today = new Date().toISOString().slice(0, 10);
-  el.todayLabel.textContent = new Date().toLocaleDateString();
+  /* ================= DATE ================= */
+  const todayKey = new Date().toISOString().slice(0, 10);
+  el.todayLabel.textContent = new Date().toLocaleDateString(undefined, {
+    weekday: "long", month: "short", day: "numeric", year: "numeric",
+  });
 
+  /* ================= STATE ================= */
   let players = [];
   let games = [];
   let adminMode = false;
+
+  /* ================= HELPERS ================= */
+  function safeTrim(v) { return (v ?? "").toString().trim(); }
 
   function showError(prefix, error) {
     console.error(prefix, error?.message || error, error?.details || "", error?.hint || "");
   }
 
+  function dayKeyFromGame(g) {
+    // Prefer 'date' if present; fall back to created_at
+    const iso = (g.date || g.created_at || "");
+    return iso ? iso.slice(0, 10) : "";
+  }
+
+  function loserFromGame(g) {
+    if (!g.winner) return "";
+    if (g.player1 && g.player2) return g.winner === g.player1 ? g.player2 : g.player1;
+    return "";
+  }
+
+  /* ================= LOAD ================= */
   async function loadData() {
-    const p = await sb.from("players").select("name").order("name");
-    if (p.error) showError("Load players:", p.error);
+    const p = await sb.from("players").select("name").order("name", { ascending: true });
+    if (p.error) showError("Failed to load players:", p.error);
     players = (p.data || []).map(x => x.name);
 
-    const g = await sb.from("games")
+    const g = await sb
+      .from("games")
       .select("*")
       .order("date", { ascending: false, nullsLast: true })
       .order("created_at", { ascending: false });
 
-    if (g.error) showError("Load games:", g.error);
+    if (g.error) showError("Failed to load games:", g.error);
     games = g.data || [];
 
     refreshUI();
     refreshAll();
   }
 
+  /* ================= PLAYERS ================= */
   async function addPlayer() {
-    const name = el.newPlayer.value.trim();
-    if (!name || players.includes(name)) return;
+    const name = safeTrim(el.newPlayer.value);
+    if (!name) return;
+    if (players.includes(name)) return;
 
     const res = await sb.from("players").insert({ name });
-    if (res.error) return showError("Add player:", res.error);
+    if (res.error) {
+      showError("Failed to add player:", res.error);
+      alert("Failed to add player (see console).");
+      return;
+    }
 
     el.newPlayer.value = "";
-    loadData();
+    await loadData();
   }
 
+  /* ================= GAMES ================= */
   async function logWin(which) {
     const p1 = el.player1.value;
     const p2 = el.player2.value;
@@ -195,51 +187,107 @@
 
     const winner = which === 1 ? p1 : p2;
 
-    const res = await sb.from("games")
-      .insert({
-        player1: p1,
-        player2: p2,
-        winner,
-        date: new Date().toISOString()
-      })
-      .select()
-      .single();
+    const payload = {
+      player1: p1,
+      player2: p2,
+      winner,
+      date: new Date().toISOString(), // timestamptz friendly
+      end_condition: el.endCondition.value || null
+    };
 
-    if (res.error) return showError("Log game:", res.error);
+    const res = await sb.from("games").insert(payload).select().single();
+
+    if (res.error) {
+      showError("Failed to log game:", res.error);
+      alert("Failed to log game (see console).");
+      return;
+    }
 
     el.endCondition.value = "";
-    loadData();
+    await loadData();
   }
 
   async function undoLastGame() {
-    if (!games.length) return;
-    const last = games[0];
+    const todayGames = games.filter(g => dayKeyFromGame(g) === todayKey);
+    if (!todayGames.length) return;
+
+    // games[] already sorted newest-first, so first is last logged
+    const last = todayGames[0];
+
     const res = await sb.from("games").delete().eq("id", last.id);
-    if (res.error) showError("Undo:", res.error);
-    loadData();
+
+    if (res.error) {
+      showError("Failed to undo last game:", res.error);
+      alert("Failed to undo (see console).");
+      return;
+    }
+
+    await loadData();
   }
 
+  /* ================= UI ================= */
   function refreshUI() {
-    [el.player1, el.player2].forEach(sel => {
-      sel.innerHTML = "<option value=''>Select player</option>";
-      players.forEach(p => sel.add(new Option(p, p)));
-    });
+    for (const sel of [el.player1, el.player2]) {
+      sel.innerHTML = "";
+      sel.appendChild(new Option("Select player", ""));
+      players.forEach(p => sel.appendChild(new Option(p, p)));
+    }
     updateState();
   }
 
   function refreshTally() {
     el.tally.innerHTML = "";
     const map = {};
-    games.filter(g => g.date?.startsWith(today)).forEach(g => {
+
+    games.filter(g => dayKeyFromGame(g) === todayKey).forEach(g => {
       map[g.winner] = (map[g.winner] || 0) + 1;
     });
-    Object.entries(map).forEach(([n,c]) => {
-      el.tally.innerHTML += `<div>${n}: ${c}</div>`;
-    });
+
+    const entries = Object.entries(map).sort((a,b) => b[1] - a[1]);
+
+    for (const [name, count] of entries) {
+      const d = document.createElement("div");
+      d.textContent = `${name}: ${count}`;
+      el.tally.appendChild(d);
+    }
+
+    if (!entries.length) el.tally.textContent = "No games logged today.";
   }
 
   function refreshPastDays() {
     el.pastDays.innerHTML = "";
+
+    const nonToday = games.filter(g => dayKeyFromGame(g) !== todayKey);
+    if (!nonToday.length) {
+      el.pastDays.textContent = "No past days yet.";
+      return;
+    }
+
+    const byDate = new Map();
+    for (const g of nonToday) {
+      const k = dayKeyFromGame(g) || "Unknown";
+      if (!byDate.has(k)) byDate.set(k, []);
+      byDate.get(k).push(g);
+    }
+
+    const dates = Array.from(byDate.keys()).sort((a,b) => (a < b ? 1 : -1));
+
+    for (const dte of dates) {
+      const header = document.createElement("div");
+      header.className = "past-day";
+      header.style.fontWeight = "bold";
+      header.textContent = dte;
+      el.pastDays.appendChild(header);
+
+      for (const g of byDate.get(dte)) {
+        const row = document.createElement("div");
+        row.style.paddingLeft = "8px";
+        const loser = loserFromGame(g);
+        row.textContent =
+          `${g.winner} beat ${loser || "(unknown)"}${g.end_condition ? " (" + g.end_condition + ")" : ""}`;
+        el.pastDays.appendChild(row);
+      }
+    }
   }
 
   function refreshAll() {
@@ -248,20 +296,40 @@
   }
 
   function updateState() {
+    el.p1WinBtn.textContent = el.player1.value ? `${el.player1.value} Won` : "Player 1 Won";
+    el.p2WinBtn.textContent = el.player2.value ? `${el.player2.value} Won` : "Player 2 Won";
+
     const ok = el.player1.value && el.player2.value && el.player1.value !== el.player2.value;
     el.p1WinBtn.disabled = !ok;
     el.p2WinBtn.disabled = !ok;
   }
 
-  el.addPlayerBtn.onclick = addPlayer;
-  el.p1WinBtn.onclick = () => logWin(1);
-  el.p2WinBtn.onclick = () => logWin(2);
-  el.undoBtn.onclick = undoLastGame;
-  el.player1.onchange = updateState;
-  el.player2.onchange = updateState;
+  /* ================= EVENTS ================= */
+  el.addPlayerBtn.addEventListener("click", addPlayer);
+  el.newPlayer.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") addPlayer();
+  });
 
+  el.player1.addEventListener("change", updateState);
+  el.player2.addEventListener("change", updateState);
+
+  el.p1WinBtn.addEventListener("click", () => logWin(1));
+  el.p2WinBtn.addEventListener("click", () => logWin(2));
+
+  el.undoBtn.addEventListener("click", undoLastGame);
+
+  document.addEventListener("keydown", (e) => {
+    if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "a") {
+      adminMode = !adminMode;
+      el.adminBanner.style.display = adminMode ? "block" : "none";
+    }
+  });
+
+  /* ================= QR ================= */
+  el.qrcode.innerHTML = "";
   new QRCode(el.qrcode, { text: APP_URL, width: 180, height: 180 });
 
+  /* ================= INIT ================= */
   loadData();
 })();
 </script>
