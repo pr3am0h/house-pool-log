@@ -76,19 +76,19 @@
 <div class="row">
   <h2>Add Player</h2>
   <input id="newPlayer" placeholder="Player name" />
-  <button onclick="addPlayer()">Add Player</button>
+  <button id="addPlayerBtn">Add Player</button>
 </div>
 
 <div class="row">
   <h2>At the Table</h2>
-  <select id="player1" onchange="updateState()"></select>
-  <select id="player2" onchange="updateState()"></select>
+  <select id="player1"></select>
+  <select id="player2"></select>
 </div>
 
 <div class="row">
   <h2>Log Win</h2>
-  <button class="win-btn" id="p1WinBtn" onclick="logWin(1)" disabled>Player 1 Won</button>
-  <button class="win-btn" id="p2WinBtn" onclick="logWin(2)" disabled>Player 2 Won</button>
+  <button class="win-btn" id="p1WinBtn" disabled>Player 1 Won</button>
+  <button class="win-btn" id="p2WinBtn" disabled>Player 2 Won</button>
 
   <select id="endCondition">
     <option value="">(Optional) End Condition</option>
@@ -98,7 +98,7 @@
     <option>Opponent missed 8</option>
   </select>
 
-  <button onclick="undoLastGame()">Undo Last Game</button>
+  <button id="undoBtn">Undo Last Game</button>
 </div>
 
 <div class="row">
@@ -113,161 +113,3 @@
 </div>
 
 <div class="qr-box">
-  <h2>Scan to Log a Game</h2>
-  <div id="qrcode"></div>
-  <div class="qr-note">Open on your phone to log games</div>
-</div>
-
-<script>
-  /* ================= CONFIG ================= */
-  const APP_URL = "https://pr3am0h.github.io/house-pool-log/";
-
-  const SUPABASE_URL = "https://wybycecwkvrukcfoqgpa.supabase.co";
-  const SUPABASE_KEY =
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind5YnljZWN3a3ZydWtjZm9xZ3BhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5NTc2MTksImV4cCI6MjA4MjUzMzYxOX0.nagtzOiCuUvRnkxKbVVmQ-ycYpWaA2e-3nHjYF3L0UU";
-
-  // ✅ CORRECT AND ONLY SUPABASE CLIENT
-  const supabase = window.supabase.createClient(
-    SUPABASE_URL,
-    SUPABASE_KEY
-  );
-
-  /* ================= DATE ================= */
-  const today = new Date().toISOString().slice(0,10);
-  document.getElementById("todayLabel").textContent =
-    new Date().toLocaleDateString(undefined, {
-      weekday: "long",
-      month: "short",
-      day: "numeric",
-      year: "numeric"
-    });
-
-  /* ================= STATE ================= */
-  let players = [];
-  let games = [];
-  let adminMode = false;
-
-  /* ================= LOAD ================= */
-  async function loadData() {
-    const p = await supabase.from("players").select("name");
-    players = p.data?.map(x => x.name) || [];
-
-    const g = await supabase.from("games").select("*");
-    games = g.data || [];
-
-    refreshUI();
-    refreshAll();
-  }
-
-  /* ================= PLAYERS ================= */
-  async function addPlayer() {
-    const name = newPlayer.value.trim();
-    if (!name || players.includes(name)) return;
-
-    await supabase.from("players").insert({ name });
-    newPlayer.value = "";
-    loadData();
-  }
-
-  /* ================= GAMES ================= */
-  async function logWin(which) {
-    if (!player1.value || !player2.value) return;
-
-    await supabase.from("games").insert({
-      date: today,
-      winner: which === 1 ? player1.value : player2.value,
-      loser: which === 1 ? player2.value : player1.value,
-      end_condition: endCondition.value || null
-    });
-
-    endCondition.value = "";
-    loadData();
-  }
-
-  async function undoLastGame() {
-    const todayGames = games.filter(g => g.date === today);
-    if (!todayGames.length) return;
-
-    await supabase.from("games")
-      .delete()
-      .eq("id", todayGames.at(-1).id);
-
-    loadData();
-  }
-
-  /* ================= UI ================= */
-  function refreshUI() {
-    [player1, player2].forEach(sel => {
-      sel.innerHTML = "<option value=''>Select player</option>";
-      players.forEach(p => sel.add(new Option(p, p)));
-    });
-    updateState();
-  }
-
-  function refreshTally() {
-    tally.innerHTML = "";
-    const map = {};
-
-    games.filter(g => g.date === today).forEach(g => {
-      map[g.winner] = (map[g.winner] || 0) + 1;
-    });
-
-    Object.entries(map).forEach(([n,c]) => {
-      const d = document.createElement("div");
-      d.textContent = `${n}: ${c}`;
-      tally.appendChild(d);
-    });
-
-    if (!Object.keys(map).length) {
-      tally.textContent = "No games logged today.";
-    }
-  }
-
-  function refreshPastDays() {
-    pastDays.innerHTML = "";
-
-    games.filter(g => g.date !== today).forEach(g => {
-      const d = document.createElement("div");
-      d.className = "past-day";
-      d.textContent = `${g.date}: ${g.winner} beat ${g.loser}`;
-      pastDays.appendChild(d);
-    });
-
-    if (!pastDays.innerHTML) {
-      pastDays.textContent = "No past days yet.";
-    }
-  }
-
-  function refreshAll() {
-    refreshTally();
-    refreshPastDays();
-  }
-
-  function updateState() {
-    p1WinBtn.textContent = player1.value ? `${player1.value} Won` : "Player 1 Won";
-    p2WinBtn.textContent = player2.value ? `${player2.value} Won` : "Player 2 Won";
-
-    const ok = player1.value && player2.value && player1.value !== player2.value;
-    p1WinBtn.disabled = !ok;
-    p2WinBtn.disabled = !ok;
-  }
-
-  document.addEventListener("keydown", e => {
-    if (e.ctrlKey && e.shiftKey && e.key === "A") {
-      adminMode = !adminMode;
-      adminBanner.style.display = adminMode ? "block" : "none";
-    }
-  });
-
-  /* ================= QR ================= */
-  new QRCode(document.getElementById("qrcode"), {
-    text: APP_URL,
-    width: 180,
-    height: 180
-  });
-
-  loadData();
-</script>
-
-</body>
-</html>
