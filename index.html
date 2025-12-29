@@ -122,203 +122,124 @@
 (() => {
   "use strict";
 
-  /* ================= CONFIG ================= */
   const APP_URL = "https://pr3am0h.github.io/house-pool-log/";
-
   const SUPABASE_URL = "https://wybycecwkvrukcfoqgpa.supabase.co";
-  const SUPABASE_KEY =
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind5YnljZWN3a3ZydWtjZm9xZ3BhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5NTc2MTksImV4cCI6MjA4MjUzMzYxOX0.nagtzOiCuUvRnkxKbVVmQ-ycYpWaA2e-3nHjYF3L0UU";
+  const SUPABASE_KEY = "YOUR_ANON_KEY";
 
-  // Guardrail: fail loudly if the CDN didn't load
   if (!window.supabase?.createClient) {
-    console.error("Supabase CDN not loaded. Check the <script src=...> tag.");
-    alert("Supabase failed to load. Please refresh the page.");
+    alert("Supabase failed to load.");
     return;
   }
 
-  // ✅ ONLY ONE SUPABASE CLIENT (scoped to this IIFE so it can't collide)
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-  /* ================= DOM ================= */
   const el = {
     adminBanner: document.getElementById("adminBanner"),
-
     newPlayer: document.getElementById("newPlayer"),
     addPlayerBtn: document.getElementById("addPlayerBtn"),
-
     player1: document.getElementById("player1"),
     player2: document.getElementById("player2"),
-
     p1WinBtn: document.getElementById("p1WinBtn"),
     p2WinBtn: document.getElementById("p2WinBtn"),
-
     endCondition: document.getElementById("endCondition"),
     undoBtn: document.getElementById("undoBtn"),
-
     todayLabel: document.getElementById("todayLabel"),
     tally: document.getElementById("tally"),
     pastDays: document.getElementById("pastDays"),
-
     qrcode: document.getElementById("qrcode"),
   };
 
-  /* ================= DATE ================= */
   const today = new Date().toISOString().slice(0, 10);
-  el.todayLabel.textContent = new Date().toLocaleDateString(undefined, {
-    weekday: "long",
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+  el.todayLabel.textContent = new Date().toLocaleDateString();
 
-  /* ================= STATE ================= */
   let players = [];
   let games = [];
   let adminMode = false;
 
-  /* ================= HELPERS ================= */
-  function safeTrim(v) { return (v ?? "").toString().trim(); }
-
   function showError(prefix, error) {
-    console.error(prefix, error);
-    // keep UI usable; only alert on things a user can act on
+    console.error(prefix, error?.message || error, error?.details || "", error?.hint || "");
   }
 
-  /* ================= LOAD ================= */
   async function loadData() {
-    const p = await sb.from("players").select("name").order("name", { ascending: true });
-    if (p.error) showError("Failed to load players:", p.error);
+    const p = await sb.from("players").select("name").order("name");
+    if (p.error) showError("Load players:", p.error);
     players = (p.data || []).map(x => x.name);
 
-    const g = await sb.from("games").select("*").order("date", { ascending: false }).order("id", { ascending: true });
-    if (g.error) showError("Failed to load games:", g.error);
+    const g = await sb.from("games")
+      .select("*")
+      .order("date", { ascending: false, nullsLast: true })
+      .order("created_at", { ascending: false });
+
+    if (g.error) showError("Load games:", g.error);
     games = g.data || [];
 
     refreshUI();
     refreshAll();
   }
 
-  /* ================= PLAYERS ================= */
   async function addPlayer() {
-    const name = safeTrim(el.newPlayer.value);
-    if (!name) return;
-    if (players.includes(name)) return;
+    const name = el.newPlayer.value.trim();
+    if (!name || players.includes(name)) return;
 
     const res = await sb.from("players").insert({ name });
-    if (res.error) {
-      showError("Failed to add player:", res.error);
-      alert("Failed to add player (see console).");
-      return;
-    }
+    if (res.error) return showError("Add player:", res.error);
 
     el.newPlayer.value = "";
-    await loadData();
+    loadData();
   }
 
-  /* ================= GAMES ================= */
   async function logWin(which) {
     const p1 = el.player1.value;
     const p2 = el.player2.value;
     if (!p1 || !p2 || p1 === p2) return;
 
     const winner = which === 1 ? p1 : p2;
-    const loser  = which === 1 ? p2 : p1;
 
-    const res = await sb.from("games").insert({
-      date: today,
-      winner,
-      loser,
-      end_condition: el.endCondition.value || null
-    });
+    const res = await sb.from("games")
+      .insert({
+        player1: p1,
+        player2: p2,
+        winner,
+        date: new Date().toISOString()
+      })
+      .select()
+      .single();
 
-    if (res.error) {
-      showError("Failed to log game:", res.error);
-      alert("Failed to log game (see console).");
-      return;
-    }
+    if (res.error) return showError("Log game:", res.error);
 
     el.endCondition.value = "";
-    await loadData();
+    loadData();
   }
 
   async function undoLastGame() {
-    const todayGames = games.filter(g => g.date === today);
-    if (!todayGames.length) return;
-
-    const last = todayGames.at(-1);
+    if (!games.length) return;
+    const last = games[0];
     const res = await sb.from("games").delete().eq("id", last.id);
-
-    if (res.error) {
-      showError("Failed to undo last game:", res.error);
-      alert("Failed to undo (see console).");
-      return;
-    }
-
-    await loadData();
+    if (res.error) showError("Undo:", res.error);
+    loadData();
   }
 
-  /* ================= UI ================= */
   function refreshUI() {
-    for (const sel of [el.player1, el.player2]) {
-      sel.innerHTML = "";
-      sel.appendChild(new Option("Select player", ""));
-      players.forEach(p => sel.appendChild(new Option(p, p)));
-    }
+    [el.player1, el.player2].forEach(sel => {
+      sel.innerHTML = "<option value=''>Select player</option>";
+      players.forEach(p => sel.add(new Option(p, p)));
+    });
     updateState();
   }
 
   function refreshTally() {
     el.tally.innerHTML = "";
     const map = {};
-
-    games.filter(g => g.date === today).forEach(g => {
+    games.filter(g => g.date?.startsWith(today)).forEach(g => {
       map[g.winner] = (map[g.winner] || 0) + 1;
     });
-
-    const entries = Object.entries(map).sort((a,b) => b[1] - a[1]);
-
-    for (const [name, count] of entries) {
-      const d = document.createElement("div");
-      d.textContent = `${name}: ${count}`;
-      el.tally.appendChild(d);
-    }
-
-    if (!entries.length) el.tally.textContent = "No games logged today.";
+    Object.entries(map).forEach(([n,c]) => {
+      el.tally.innerHTML += `<div>${n}: ${c}</div>`;
+    });
   }
 
   function refreshPastDays() {
     el.pastDays.innerHTML = "";
-
-    const nonToday = games.filter(g => g.date !== today);
-
-    if (!nonToday.length) {
-      el.pastDays.textContent = "No past days yet.";
-      return;
-    }
-
-    // Group by date (newest first)
-    const byDate = new Map();
-    for (const g of nonToday) {
-      if (!byDate.has(g.date)) byDate.set(g.date, []);
-      byDate.get(g.date).push(g);
-    }
-
-    const dates = Array.from(byDate.keys()).sort((a,b) => (a < b ? 1 : -1));
-
-    for (const dte of dates) {
-      const header = document.createElement("div");
-      header.className = "past-day";
-      header.style.fontWeight = "bold";
-      header.textContent = dte;
-      el.pastDays.appendChild(header);
-
-      for (const g of byDate.get(dte)) {
-        const row = document.createElement("div");
-        row.style.paddingLeft = "8px";
-        row.textContent = `${g.winner} beat ${g.loser}${g.end_condition ? " (" + g.end_condition + ")" : ""}`;
-        el.pastDays.appendChild(row);
-      }
-    }
   }
 
   function refreshAll() {
@@ -327,43 +248,21 @@
   }
 
   function updateState() {
-    el.p1WinBtn.textContent = el.player1.value ? `${el.player1.value} Won` : "Player 1 Won";
-    el.p2WinBtn.textContent = el.player2.value ? `${el.player2.value} Won` : "Player 2 Won";
-
     const ok = el.player1.value && el.player2.value && el.player1.value !== el.player2.value;
     el.p1WinBtn.disabled = !ok;
     el.p2WinBtn.disabled = !ok;
   }
 
-  /* ================= EVENTS ================= */
-  el.addPlayerBtn.addEventListener("click", addPlayer);
-  el.newPlayer.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") addPlayer();
-  });
+  el.addPlayerBtn.onclick = addPlayer;
+  el.p1WinBtn.onclick = () => logWin(1);
+  el.p2WinBtn.onclick = () => logWin(2);
+  el.undoBtn.onclick = undoLastGame;
+  el.player1.onchange = updateState;
+  el.player2.onchange = updateState;
 
-  el.player1.addEventListener("change", updateState);
-  el.player2.addEventListener("change", updateState);
-
-  el.p1WinBtn.addEventListener("click", () => logWin(1));
-  el.p2WinBtn.addEventListener("click", () => logWin(2));
-
-  el.undoBtn.addEventListener("click", undoLastGame);
-
-  document.addEventListener("keydown", (e) => {
-    if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "a") {
-      adminMode = !adminMode;
-      el.adminBanner.style.display = adminMode ? "block" : "none";
-    }
-  });
-
-  /* ================= QR ================= */
-  // Avoid duplicate QR if the script runs twice for any reason
-  el.qrcode.innerHTML = "";
   new QRCode(el.qrcode, { text: APP_URL, width: 180, height: 180 });
 
-  /* ================= INIT ================= */
   loadData();
-
 })();
 </script>
 
