@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>House Pool Log</title>
 
-  <!-- Supabase -->
+  <!-- Supabase v2 (CDN) -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
-  <!-- QR Code library -->
+  <!-- QR Code -->
   <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 
   <style>
@@ -75,7 +75,7 @@
 
 <div class="row">
   <h2>Add Player</h2>
-  <input id="newPlayer" placeholder="Player name"/>
+  <input id="newPlayer" placeholder="Player name" />
   <button onclick="addPlayer()">Add Player</button>
 </div>
 
@@ -112,26 +112,27 @@
   <div id="pastDays"></div>
 </div>
 
-<!-- QR CODE -->
 <div class="qr-box">
   <h2>Scan to Log a Game</h2>
   <div id="qrcode"></div>
-  <div class="qr-note">
-    Open on your phone to log games
-  </div>
+  <div class="qr-note">Open on your phone to log games</div>
 </div>
 
 <script>
-  /* ================== CONFIG ================== */
+  /* ================= CONFIG ================= */
   const APP_URL = "https://pr3am0h.github.io/house-pool-log/";
 
   const SUPABASE_URL = "https://wybycecwkvrukcfoqgpa.supabase.co";
   const SUPABASE_KEY =
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind5YnljZWN3a3ZydWtjZm9xZ3BhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5NTc2MTksImV4cCI6MjA4MjUzMzYxOX0.nagtzOiCuUvRnkxKbVVmQ-ycYpWaA2e-3nHjYF3L0UU";
 
-  const supabase = supabaseJs.createClient(SUPABASE_URL, SUPABASE_KEY);
+  // ✅ CORRECT AND ONLY SUPABASE CLIENT
+  const supabase = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY
+  );
 
-  /* ================== DATE ================== */
+  /* ================= DATE ================= */
   const today = new Date().toISOString().slice(0,10);
   document.getElementById("todayLabel").textContent =
     new Date().toLocaleDateString(undefined, {
@@ -141,12 +142,12 @@
       year: "numeric"
     });
 
-  /* ================== STATE ================== */
+  /* ================= STATE ================= */
   let players = [];
   let games = [];
   let adminMode = false;
 
-  /* ================== LOAD ================== */
+  /* ================= LOAD ================= */
   async function loadData() {
     const p = await supabase.from("players").select("name");
     players = p.data?.map(x => x.name) || [];
@@ -158,24 +159,27 @@
     refreshAll();
   }
 
-  /* ================== PLAYERS ================== */
+  /* ================= PLAYERS ================= */
   async function addPlayer() {
     const name = newPlayer.value.trim();
     if (!name || players.includes(name)) return;
+
     await supabase.from("players").insert({ name });
     newPlayer.value = "";
     loadData();
   }
 
-  /* ================== GAMES ================== */
+  /* ================= GAMES ================= */
   async function logWin(which) {
     if (!player1.value || !player2.value) return;
+
     await supabase.from("games").insert({
       date: today,
       winner: which === 1 ? player1.value : player2.value,
       loser: which === 1 ? player2.value : player1.value,
       end_condition: endCondition.value || null
     });
+
     endCondition.value = "";
     loadData();
   }
@@ -183,11 +187,15 @@
   async function undoLastGame() {
     const todayGames = games.filter(g => g.date === today);
     if (!todayGames.length) return;
-    await supabase.from("games").delete().eq("id", todayGames.at(-1).id);
+
+    await supabase.from("games")
+      .delete()
+      .eq("id", todayGames.at(-1).id);
+
     loadData();
   }
 
-  /* ================== UI ================== */
+  /* ================= UI ================= */
   function refreshUI() {
     [player1, player2].forEach(sel => {
       sel.innerHTML = "<option value=''>Select player</option>";
@@ -199,26 +207,35 @@
   function refreshTally() {
     tally.innerHTML = "";
     const map = {};
+
     games.filter(g => g.date === today).forEach(g => {
       map[g.winner] = (map[g.winner] || 0) + 1;
     });
+
     Object.entries(map).forEach(([n,c]) => {
       const d = document.createElement("div");
       d.textContent = `${n}: ${c}`;
       tally.appendChild(d);
     });
-    if (!Object.keys(map).length) tally.textContent = "No games logged today.";
+
+    if (!Object.keys(map).length) {
+      tally.textContent = "No games logged today.";
+    }
   }
 
   function refreshPastDays() {
     pastDays.innerHTML = "";
+
     games.filter(g => g.date !== today).forEach(g => {
       const d = document.createElement("div");
       d.className = "past-day";
       d.textContent = `${g.date}: ${g.winner} beat ${g.loser}`;
       pastDays.appendChild(d);
     });
-    if (!pastDays.innerHTML) pastDays.textContent = "No past days yet.";
+
+    if (!pastDays.innerHTML) {
+      pastDays.textContent = "No past days yet.";
+    }
   }
 
   function refreshAll() {
@@ -229,6 +246,7 @@
   function updateState() {
     p1WinBtn.textContent = player1.value ? `${player1.value} Won` : "Player 1 Won";
     p2WinBtn.textContent = player2.value ? `${player2.value} Won` : "Player 2 Won";
+
     const ok = player1.value && player2.value && player1.value !== player2.value;
     p1WinBtn.disabled = !ok;
     p2WinBtn.disabled = !ok;
@@ -241,7 +259,7 @@
     }
   });
 
-  /* ================== QR ================== */
+  /* ================= QR ================= */
   new QRCode(document.getElementById("qrcode"), {
     text: APP_URL,
     width: 180,
