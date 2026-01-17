@@ -17,10 +17,9 @@ select,input { width:100%; padding:10px; font-size:16px; margin-top:6px; }
 .row { margin-bottom:12px; }
 .win-btn { font-weight:bold; }
 .tally { background:#f4f4f4; padding:12px; border-radius:6px; }
-.date-label { font-size:15px; color:#555; }
-.past-day { border-bottom:1px solid #ddd; padding-bottom:6px; margin-top:10px; }
+.past-day { border-bottom:1px solid #ddd; margin-bottom:8px; padding-bottom:6px; }
 .admin-banner { background:#222; color:#fff; padding:6px; text-align:center; display:none; font-size:13px; }
-.delete-btn { color:red; cursor:pointer; font-size:14px; margin-left:8px; }
+.delete-btn { color:red; cursor:pointer; margin-left:6px; }
 </style>
 </head>
 
@@ -40,12 +39,6 @@ select,input { width:100%; padding:10px; font-size:16px; margin-top:6px; }
 <h2>At the Table</h2>
 <select id="player1"></select>
 <select id="player2"></select>
-
-<select id="grouping">
-<option value="">(Optional) Player 1 Group</option>
-<option value="Solids">Solids</option>
-<option value="Stripes">Stripes</option>
-</select>
 </div>
 
 <div class="row">
@@ -66,7 +59,7 @@ select,input { width:100%; padding:10px; font-size:16px; margin-top:6px; }
 
 <div class="row">
 <h2>Today</h2>
-<div id="todayLabel" class="date-label"></div>
+<div id="todayLabel"></div>
 <div id="tally" class="tally"></div>
 </div>
 
@@ -80,7 +73,7 @@ select,input { width:100%; padding:10px; font-size:16px; margin-top:6px; }
 "use strict";
 
 const SUPABASE_URL = "https://wybycecwkvrukcfoqgpa.supabase.co";
-const SUPABASE_KEY = "YOUR_KEY_HERE";
+const SUPABASE_KEY = "YOUR_ANON_KEY";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const el = {
@@ -89,7 +82,6 @@ newPlayer: document.getElementById("newPlayer"),
 addPlayerBtn: document.getElementById("addPlayerBtn"),
 player1: document.getElementById("player1"),
 player2: document.getElementById("player2"),
-grouping: document.getElementById("grouping"),
 p1WinBtn: document.getElementById("p1WinBtn"),
 p2WinBtn: document.getElementById("p2WinBtn"),
 endCondition: document.getElementById("endCondition"),
@@ -123,22 +115,20 @@ loadData();
 async function logWin(which){
 const p1=el.player1.value, p2=el.player2.value;
 if(!p1||!p2||p1===p2) return;
-
-let p1_group = el.grouping.value || null;
-let p2_group = p1_group==="Solids"?"Stripes":p1_group==="Stripes"?"Solids":null;
-
 await sb.from("games").insert({
 player1:p1,
 player2:p2,
 winner: which===1?p1:p2,
-p1_group,
-p2_group,
-date:new Date().toISOString(),
-end_condition:el.endCondition.value||null
+date:new Date().toISOString()
 });
-
 el.endCondition.value="";
-el.grouping.value="";
+loadData();
+}
+
+async function undoLastGame(){
+const todayGames = games.filter(g=>dayKey(g)===todayKey);
+if(!todayGames.length) return;
+await sb.from("games").delete().eq("id",todayGames[0].id);
 loadData();
 }
 
@@ -150,21 +140,40 @@ loadData();
 }
 
 function refresh(){
-el.player1.innerHTML=el.player2.innerHTML="<option value=''>Select player</option>";
-players.forEach(p=>{
-el.player1.add(new Option(p,p));
-el.player2.add(new Option(p,p));
-});
+refreshPlayers();
+refreshTally();
+refreshPastDays();
+}
 
+function refreshPlayers(){
+[el.player1,el.player2].forEach(sel=>{
+sel.innerHTML="<option value=''>Select player</option>";
+players.forEach(p=>sel.add(new Option(p,p)));
+});
+updateState();
+}
+
+function refreshTally(){
+el.tally.innerHTML="";
+const map={};
+games.filter(g=>dayKey(g)===todayKey).forEach(g=>{
+map[g.winner]=(map[g.winner]||0)+1;
+});
+Object.entries(map).forEach(([n,c])=>{
+el.tally.innerHTML+=`<div>${n}: ${c}</div>`;
+});
+}
+
+function refreshPastDays(){
 el.pastDays.innerHTML="";
+const past = games.filter(g=>dayKey(g)!==todayKey);
 const byDate={};
-games.forEach(g=>{
-const k=dayKey(g);
-if(!byDate[k]) byDate[k]=[];
-byDate[k].push(g);
+past.forEach(g=>{
+const d=dayKey(g);
+(byDate[d]=byDate[d]||[]).push(g);
 });
 
-Object.keys(byDate).filter(d=>d!==todayKey).sort().reverse().forEach(d=>{
+Object.keys(byDate).sort().reverse().forEach(d=>{
 const h=document.createElement("div");
 h.className="past-day";
 h.textContent=d;
@@ -172,11 +181,10 @@ el.pastDays.appendChild(h);
 
 byDate[d].forEach(g=>{
 const row=document.createElement("div");
-row.textContent=
-`${g.winner} (${g.p1_group||"?"}) beat ${g.winner===g.player1?g.player2:g.player1}`;
+row.textContent=`${g.winner} beat ${g.winner===g.player1?g.player2:g.player1}`;
 if(adminMode){
 const del=document.createElement("span");
-del.textContent="🗑";
+del.textContent=" 🗑";
 del.className="delete-btn";
 del.onclick=()=>deleteGame(g.id);
 row.appendChild(del);
@@ -186,8 +194,15 @@ el.pastDays.appendChild(row);
 });
 }
 
+function updateState(){
+const ok=el.player1.value&&el.player2.value&&el.player1.value!==el.player2.value;
+el.p1WinBtn.disabled=!ok;
+el.p2WinBtn.disabled=!ok;
+}
+
 document.addEventListener("keydown",e=>{
-if(e.ctrlKey&&e.shiftKey&&e.key==="A"){
+if(e.ctrlKey&&e.altKey&&e.key.toLowerCase()==="a"){
+e.preventDefault();
 adminMode=!adminMode;
 el.adminBanner.style.display=adminMode?"block":"none";
 refresh();
@@ -197,6 +212,9 @@ refresh();
 el.addPlayerBtn.onclick=addPlayer;
 el.p1WinBtn.onclick=()=>logWin(1);
 el.p2WinBtn.onclick=()=>logWin(2);
+el.undoBtn.onclick=undoLastGame;
+el.player1.onchange=updateState;
+el.player2.onchange=updateState;
 
 loadData();
 })();
@@ -204,4 +222,3 @@ loadData();
 
 </body>
 </html>
-
