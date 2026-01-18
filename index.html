@@ -6,7 +6,6 @@
 <title>House Pool Log</title>
 
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 
 <style>
 body { font-family: system-ui, sans-serif; padding:16px; max-width:500px; margin:auto; }
@@ -39,6 +38,12 @@ select,input { width:100%; padding:10px; font-size:16px; margin-top:6px; }
 <h2>At the Table</h2>
 <select id="player1"></select>
 <select id="player2"></select>
+
+<select id="grouping">
+<option value="">(Optional) Player 1 Group</option>
+<option value="Solids">Solids</option>
+<option value="Stripes">Stripes</option>
+</select>
 </div>
 
 <div class="row">
@@ -82,6 +87,7 @@ newPlayer: document.getElementById("newPlayer"),
 addPlayerBtn: document.getElementById("addPlayerBtn"),
 player1: document.getElementById("player1"),
 player2: document.getElementById("player2"),
+grouping: document.getElementById("grouping"),
 p1WinBtn: document.getElementById("p1WinBtn"),
 p2WinBtn: document.getElementById("p2WinBtn"),
 endCondition: document.getElementById("endCondition"),
@@ -95,29 +101,15 @@ const todayKey = new Date().toISOString().slice(0,10);
 el.todayLabel.textContent = new Date().toLocaleDateString();
 
 let players=[], games=[], adminMode=false;
-
 const dayKey = g => (g.date || g.created_at || "").slice(0,10);
 
-async function loadData() {
-  const pRes = await sb.from("players").select("name").order("name");
-  if (pRes.error) {
-    console.error("Load players failed:", pRes.error);
-    players = [];
-  } else {
-    players = (pRes.data || []).map(p => p.name);
-  }
+async function loadData(){
+players = (await sb.from("players").select("name").order("name")).data || [];
+players = players.map(p=>p.name);
 
-  const gRes = await sb.from("games").select("*").order("date", { ascending: false });
-  if (gRes.error) {
-    console.error("Load games failed:", gRes.error);
-    games = [];
-  } else {
-    games = gRes.data || [];
-  }
-
-  refresh();
+games = (await sb.from("games").select("*").order("date",{ascending:false})).data || [];
+refresh();
 }
-
 
 async function addPlayer(){
 const name=el.newPlayer.value.trim();
@@ -130,12 +122,21 @@ loadData();
 async function logWin(which){
 const p1=el.player1.value, p2=el.player2.value;
 if(!p1||!p2||p1===p2) return;
+
+let p1_group = el.grouping.value || null;
+let p2_group = p1_group === "Solids" ? "Stripes" :
+               p1_group === "Stripes" ? "Solids" : null;
+
 await sb.from("games").insert({
 player1:p1,
 player2:p2,
 winner: which===1?p1:p2,
+p1_group,
+p2_group,
 date:new Date().toISOString()
 });
+
+el.grouping.value="";
 el.endCondition.value="";
 loadData();
 }
@@ -183,9 +184,9 @@ function refreshPastDays(){
 el.pastDays.innerHTML="";
 const past = games.filter(g=>dayKey(g)!==todayKey);
 const byDate={};
+
 past.forEach(g=>{
-const d=dayKey(g);
-(byDate[d]=byDate[d]||[]).push(g);
+(byDate[dayKey(g)] ||= []).push(g);
 });
 
 Object.keys(byDate).sort().reverse().forEach(d=>{
@@ -196,7 +197,8 @@ el.pastDays.appendChild(h);
 
 byDate[d].forEach(g=>{
 const row=document.createElement("div");
-row.textContent=`${g.winner} beat ${g.winner===g.player1?g.player2:g.player1}`;
+row.textContent =
+`${g.winner} (${g.p1_group||"?"}) beat ${g.winner===g.player1?g.player2:g.player1}`;
 if(adminMode){
 const del=document.createElement("span");
 del.textContent=" 🗑";
