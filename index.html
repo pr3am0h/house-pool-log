@@ -73,7 +73,7 @@ select,input { width:100%; padding:10px; font-size:16px; margin-top:6px; }
 "use strict";
 
 const SUPABASE_URL = "https://wybycecwkvrukcfoqgpa.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9....";
+const SUPABASE_KEY = "sb_publishable_nNpJJg1ZBcQSjbX1HhPeKg_5KeR8ngb";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const el = {
@@ -98,11 +98,26 @@ let players=[], games=[], adminMode=false;
 
 const dayKey = g => (g.date || g.created_at || "").slice(0,10);
 
-async function loadData(){
-players = (await sb.from("players").select("name").order("name")).data.map(p=>p.name);
-games = (await sb.from("games").select("*").order("date",{ascending:false})).data;
-refresh();
+async function loadData() {
+  const pRes = await sb.from("players").select("name").order("name");
+  if (pRes.error) {
+    console.error("Load players failed:", pRes.error);
+    players = [];
+  } else {
+    players = (pRes.data || []).map(p => p.name);
+  }
+
+  const gRes = await sb.from("games").select("*").order("date", { ascending: false });
+  if (gRes.error) {
+    console.error("Load games failed:", gRes.error);
+    games = [];
+  } else {
+    games = gRes.data || [];
+  }
+
+  refresh();
 }
+
 
 async function addPlayer(){
 const name=el.newPlayer.value.trim();
