@@ -14,7 +14,6 @@ button { width:100%; padding:14px; font-size:18px; margin-top:8px; }
 button:disabled { opacity:0.4; }
 select,input { width:100%; padding:10px; font-size:16px; margin-top:6px; }
 .row { margin-bottom:12px; }
-.win-btn { font-weight:bold; }
 .tally { background:#f4f4f4; padding:12px; border-radius:6px; }
 .past-day { border-bottom:1px solid #ddd; margin-bottom:8px; padding-bottom:6px; }
 .admin-banner { background:#222; color:#fff; padding:6px; text-align:center; display:none; font-size:13px; }
@@ -40,7 +39,7 @@ select,input { width:100%; padding:10px; font-size:16px; margin-top:6px; }
   <select id="player2"></select>
 
   <select id="grouping">
-    <option value="" id="groupingLabel">(Optional) Player 1 Group</option>
+    <option value="" id="groupingLabel">(Optional) Group</option>
     <option value="Solids">Solids</option>
     <option value="Stripes">Stripes</option>
   </select>
@@ -151,13 +150,6 @@ async function undoLastGame(){
   loadData();
 }
 
-async function deleteGame(id){
-  if(!adminMode) return;
-  if(!confirm("Delete this game?")) return;
-  await sb.from("games").delete().eq("id", id);
-  loadData();
-}
-
 function refresh(){
   refreshPlayers();
   refreshTally();
@@ -204,19 +196,12 @@ function refreshPastDays(){
         `${g.winner} (${g.p1_group || "?"}) beat ${
           g.winner === g.player1 ? g.player2 : g.player1
         }`;
-      if(adminMode){
-        const del = document.createElement("span");
-        del.textContent = " 🗑";
-        del.className = "delete-btn";
-        del.onclick = () => deleteGame(g.id);
-        row.appendChild(del);
-      }
       el.pastDays.appendChild(row);
     });
   });
 }
 
-/* ✅ UPDATED: button labels + grouping label */
+/* ✅ Corrected UI state logic */
 function updateState(){
   const p1 = el.player1.value;
   const p2 = el.player2.value;
@@ -228,18 +213,9 @@ function updateState(){
   el.p1WinBtn.textContent = ok ? `${p1} Won` : "Player 1 Won";
   el.p2WinBtn.textContent = ok ? `${p2} Won` : "Player 2 Won";
 
-  // Grouping dropdown label becomes "(Optional) <PlayerName> Group"
-  el.groupingLabel.textContent = p1 ? `(Optional) ${p1} Group` : "(Optional) Player 1 Group";
+  el.groupingLabel.textContent =
+    p1 ? `(Optional) ${p1} Group` : "(Optional) Group";
 }
-
-document.addEventListener("keydown", e => {
-  if(e.ctrlKey && e.altKey && e.key.toLowerCase() === "a"){
-    e.preventDefault();
-    adminMode = !adminMode;
-    el.adminBanner.style.display = adminMode ? "block" : "none";
-    refresh();
-  }
-});
 
 el.addPlayerBtn.onclick = addPlayer;
 el.p1WinBtn.onclick = () => logWin(1);
