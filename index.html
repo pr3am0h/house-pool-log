@@ -40,7 +40,7 @@ select,input { width:100%; padding:10px; font-size:16px; margin-top:6px; }
   <select id="player2"></select>
 
   <select id="grouping">
-    <option value="">(Optional) Player 1 Group</option>
+    <option value="" id="groupingLabel">(Optional) Player 1 Group</option>
     <option value="Solids">Solids</option>
     <option value="Stripes">Stripes</option>
   </select>
@@ -88,6 +88,7 @@ const el = {
   player1: document.getElementById("player1"),
   player2: document.getElementById("player2"),
   grouping: document.getElementById("grouping"),
+  groupingLabel: document.getElementById("groupingLabel"),
   p1WinBtn: document.getElementById("p1WinBtn"),
   p2WinBtn: document.getElementById("p2WinBtn"),
   endCondition: document.getElementById("endCondition"),
@@ -215,7 +216,7 @@ function refreshPastDays(){
   });
 }
 
-/* 🔑 UPDATED LOGIC */
+/* ✅ UPDATED: button labels + grouping label */
 function updateState(){
   const p1 = el.player1.value;
   const p2 = el.player2.value;
@@ -226,6 +227,9 @@ function updateState(){
 
   el.p1WinBtn.textContent = ok ? `${p1} Won` : "Player 1 Won";
   el.p2WinBtn.textContent = ok ? `${p2} Won` : "Player 2 Won";
+
+  // Grouping dropdown label becomes "(Optional) <PlayerName> Group"
+  el.groupingLabel.textContent = p1 ? `(Optional) ${p1} Group` : "(Optional) Player 1 Group";
 }
 
 document.addEventListener("keydown", e => {
