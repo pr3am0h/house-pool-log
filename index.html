@@ -15,7 +15,7 @@ body {
   max-width:500px;
   margin:auto;
 }
-h2 { margin-top:24px; }
+h2 { margin-top:20px; }
 button {
   width:100%;
   padding:14px;
@@ -29,7 +29,28 @@ select,input {
   font-size:16px;
   margin-top:6px;
 }
-.row { margin-bottom:12px; }
+.row { margin-bottom:16px; }
+
+.standings-box {
+  background:#f4f4f4;
+  padding:12px;
+  border-radius:6px;
+  margin-bottom:12px;
+}
+.standings-row {
+  display:flex;
+  justify-content:space-between;
+  margin-bottom:4px;
+}
+.leader {
+  font-weight:bold;
+  color:#0a7d2c;
+}
+.small-note {
+  font-size:12px;
+  color:#555;
+}
+
 .tally {
   background:#f4f4f4;
   padding:12px;
@@ -40,16 +61,7 @@ select,input {
   margin-bottom:8px;
   padding-bottom:6px;
 }
-.admin-banner {
-  background:#222;
-  color:#fff;
-  padding:6px;
-  text-align:center;
-  display:none;
-  font-size:13px;
-}
 
-/* QR section */
 .qr-section {
   margin-top:40px;
   padding-top:20px;
@@ -67,56 +79,70 @@ select,input {
 
 <body>
 
-<div id="adminBanner" class="admin-banner">ADMIN MODE</div>
-
 <h1>🎱 House Pool Log</h1>
 
+<!-- STANDINGS -->
+<div class="row">
+
+  <div class="standings-box">
+    <h2>🏆 Overall Standings</h2>
+    <div id="overallStandings"></div>
+    <div id="overallTotal" class="small-note"></div>
+  </div>
+
+  <div class="standings-box">
+    <h2>🔥 Current Streak</h2>
+    <div id="streak"></div>
+  </div>
+
+  <div class="standings-box">
+    <h2>📅 This Month</h2>
+    <div id="monthStandings"></div>
+  </div>
+
+  <div class="standings-box">
+    <h2>📆 This Year</h2>
+    <div id="yearStandings"></div>
+  </div>
+
+</div>
+
+<!-- ADD PLAYER -->
 <div class="row">
   <h2>Add Player</h2>
   <input id="newPlayer" placeholder="Player name"/>
   <button id="addPlayerBtn">Add Player</button>
 </div>
 
+<!-- AT TABLE -->
 <div class="row">
   <h2>At the Table</h2>
   <select id="player1"></select>
   <select id="player2"></select>
-
-  <select id="grouping">
-    <option value="" id="groupingLabel">(Optional) Group</option>
-    <option value="Solids">Solids</option>
-    <option value="Stripes">Stripes</option>
-  </select>
 </div>
 
+<!-- LOG WIN -->
 <div class="row">
   <h2>Log Win</h2>
   <button id="p1WinBtn" disabled>Player 1 Won</button>
   <button id="p2WinBtn" disabled>Player 2 Won</button>
-
-  <select id="endCondition">
-    <option value="">(Optional) End Condition</option>
-    <option>Clean win</option>
-    <option>Opponent scratched on 8</option>
-    <option>Opponent sank 8 early</option>
-    <option>Opponent missed 8</option>
-  </select>
-
   <button id="undoBtn">Undo Last Game</button>
 </div>
 
+<!-- TODAY -->
 <div class="row">
   <h2>Today</h2>
   <div id="todayLabel"></div>
   <div id="tally" class="tally"></div>
 </div>
 
+<!-- PAST -->
 <div class="row">
   <h2>Past Days</h2>
   <div id="pastDays"></div>
 </div>
 
-<!-- ✅ QR CODE SECTION -->
+<!-- QR -->
 <div class="qr-section">
   <div>Scan to open this app</div>
   <div id="qrcode"></div>
@@ -131,16 +157,12 @@ const SUPABASE_KEY = "sb_publishable_nNpJJg1ZBcQSjbX1HhPeKg_5KeR8ngb";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const el = {
-  adminBanner: document.getElementById("adminBanner"),
   newPlayer: document.getElementById("newPlayer"),
   addPlayerBtn: document.getElementById("addPlayerBtn"),
   player1: document.getElementById("player1"),
   player2: document.getElementById("player2"),
-  grouping: document.getElementById("grouping"),
-  groupingLabel: document.getElementById("groupingLabel"),
   p1WinBtn: document.getElementById("p1WinBtn"),
   p2WinBtn: document.getElementById("p2WinBtn"),
-  endCondition: document.getElementById("endCondition"),
   undoBtn: document.getElementById("undoBtn"),
   todayLabel: document.getElementById("todayLabel"),
   tally: document.getElementById("tally"),
@@ -152,13 +174,15 @@ el.todayLabel.textContent = new Date().toLocaleDateString();
 
 let players = [], games = [];
 
-const dayKey = g => (g.date || g.created_at || "").slice(0,10);
+const dayKey = g => (g.date || "").slice(0,10);
 
 async function loadData(){
+
   players = (await sb.from("players").select("name").order("name")).data || [];
   players = players.map(p => p.name);
 
   games = (await sb.from("games").select("*").order("date",{ascending:false})).data || [];
+
   refresh();
 }
 
@@ -175,22 +199,13 @@ async function logWin(which){
   const p2 = el.player2.value;
   if(!p1 || !p2 || p1 === p2) return;
 
-  const p1_group = el.grouping.value || null;
-  const p2_group =
-    p1_group === "Solids" ? "Stripes" :
-    p1_group === "Stripes" ? "Solids" : null;
-
   await sb.from("games").insert({
     player1: p1,
     player2: p2,
     winner: which === 1 ? p1 : p2,
-    p1_group,
-    p2_group,
     date: new Date().toISOString()
   });
 
-  el.grouping.value = "";
-  el.endCondition.value = "";
   loadData();
 }
 
@@ -201,89 +216,139 @@ async function undoLastGame(){
   loadData();
 }
 
+function computeStats(list){
+  const stats = {};
+  list.forEach(g=>{
+    [g.player1,g.player2].forEach(p=>{
+      if(!stats[p]) stats[p]={wins:0,losses:0};
+    });
+    stats[g.winner].wins++;
+    const loser = g.winner===g.player1?g.player2:g.player1;
+    stats[loser].losses++;
+  });
+  return stats;
+}
+
+function renderStandings(elId,list){
+  const stats = computeStats(list);
+  const container = document.getElementById(elId);
+  container.innerHTML="";
+  const sorted = Object.entries(stats)
+    .sort((a,b)=>b[1].wins-a[1].wins);
+
+  sorted.forEach(([name,s],i)=>{
+    const total=s.wins+s.losses;
+    const pct= total?((s.wins/total)*100).toFixed(1):0;
+
+    const div=document.createElement("div");
+    div.className="standings-row"+(i===0?" leader":"");
+    div.innerHTML=
+      `<span>${name}</span>
+       <span>${s.wins} – ${s.losses} (${pct}%)</span>`;
+    container.appendChild(div);
+  });
+}
+
+function computeStreak(){
+  if(!games.length) return "None";
+  let current=games[0].winner;
+  let count=0;
+  for(let g of games){
+    if(g.winner===current) count++;
+    else break;
+  }
+  return `${current} W${count}`;
+}
+
 function refresh(){
   refreshPlayers();
   refreshTally();
   refreshPastDays();
+
+  renderStandings("overallStandings",games);
+
+  document.getElementById("overallTotal").textContent=
+    `Total Games: ${games.length}`;
+
+  document.getElementById("streak").textContent=
+    computeStreak();
+
+  const startMonth=new Date(); startMonth.setDate(1); startMonth.setHours(0,0,0,0);
+  const monthGames=games.filter(g=>new Date(g.date)>=startMonth);
+  renderStandings("monthStandings",monthGames);
+
+  const startYear=new Date(new Date().getFullYear(),0,1);
+  const yearGames=games.filter(g=>new Date(g.date)>=startYear);
+  renderStandings("yearStandings",yearGames);
 }
 
 function refreshPlayers(){
-  [el.player1, el.player2].forEach(sel => {
-    sel.innerHTML = "<option value=''>Select player</option>";
-    players.forEach(p => sel.add(new Option(p, p)));
+  [el.player1,el.player2].forEach(sel=>{
+    sel.innerHTML="<option value=''>Select player</option>";
+    players.forEach(p=>sel.add(new Option(p,p)));
   });
   updateState();
 }
 
 function refreshTally(){
-  el.tally.innerHTML = "";
-  const map = {};
-  games.filter(g => dayKey(g) === todayKey).forEach(g => {
-    map[g.winner] = (map[g.winner] || 0) + 1;
+  el.tally.innerHTML="";
+  const todayGames=games.filter(g=>dayKey(g)===todayKey);
+  const map={};
+  todayGames.forEach(g=>{
+    map[g.winner]=(map[g.winner]||0)+1;
   });
-  Object.entries(map).forEach(([n,c]) => {
-    el.tally.innerHTML += `<div>${n}: ${c}</div>`;
+  Object.entries(map).forEach(([n,c])=>{
+    el.tally.innerHTML+=`<div>${n}: ${c}</div>`;
   });
 }
 
 function refreshPastDays(){
-  el.pastDays.innerHTML = "";
-  const past = games.filter(g => dayKey(g) !== todayKey);
-  const byDate = {};
-
-  past.forEach(g => {
+  el.pastDays.innerHTML="";
+  const past=games.filter(g=>dayKey(g)!==todayKey);
+  const byDate={};
+  past.forEach(g=>{
     (byDate[dayKey(g)] ||= []).push(g);
   });
-
-  Object.keys(byDate).sort().reverse().forEach(d => {
-    const h = document.createElement("div");
-    h.className = "past-day";
-    h.textContent = d;
+  Object.keys(byDate).sort().reverse().forEach(d=>{
+    const h=document.createElement("div");
+    h.className="past-day";
+    h.textContent=d;
     el.pastDays.appendChild(h);
-
-    byDate[d].forEach(g => {
-      const row = document.createElement("div");
-      row.textContent =
-        `${g.winner} (${g.p1_group || "?"}) beat ${
-          g.winner === g.player1 ? g.player2 : g.player1
-        }`;
+    byDate[d].forEach(g=>{
+      const row=document.createElement("div");
+      row.textContent=
+        `${g.winner} beat ${
+          g.winner===g.player1?g.player2:g.player1}`;
       el.pastDays.appendChild(row);
     });
   });
 }
 
 function updateState(){
-  const p1 = el.player1.value;
-  const p2 = el.player2.value;
-  const ok = p1 && p2 && p1 !== p2;
-
-  el.p1WinBtn.disabled = !ok;
-  el.p2WinBtn.disabled = !ok;
-
-  el.p1WinBtn.textContent = ok ? `${p1} Won` : "Player 1 Won";
-  el.p2WinBtn.textContent = ok ? `${p2} Won` : "Player 2 Won";
-
-  el.groupingLabel.textContent =
-    p1 ? `(Optional) ${p1} Group` : "(Optional) Group";
+  const p1=el.player1.value;
+  const p2=el.player2.value;
+  const ok=p1&&p2&&p1!==p2;
+  el.p1WinBtn.disabled=!ok;
+  el.p2WinBtn.disabled=!ok;
+  el.p1WinBtn.textContent=ok?`${p1} Won`:"Player 1 Won";
+  el.p2WinBtn.textContent=ok?`${p2} Won`:"Player 2 Won";
 }
 
-el.addPlayerBtn.onclick = addPlayer;
-el.p1WinBtn.onclick = () => logWin(1);
-el.p2WinBtn.onclick = () => logWin(2);
-el.undoBtn.onclick = undoLastGame;
-el.player1.onchange = updateState;
-el.player2.onchange = updateState;
+el.addPlayerBtn.onclick=addPlayer;
+el.p1WinBtn.onclick=()=>logWin(1);
+el.p2WinBtn.onclick=()=>logWin(2);
+el.undoBtn.onclick=undoLastGame;
+el.player1.onchange=updateState;
+el.player2.onchange=updateState;
 
-/* ✅ Generate QR Code */
-new QRCode(document.getElementById("qrcode"), {
-  text: window.location.href,
-  width: 160,
-  height: 160
+new QRCode(document.getElementById("qrcode"),{
+  text:window.location.href,
+  width:160,
+  height:160
 });
 
 loadData();
 })();
 </script>
-
 </body>
 </html>
