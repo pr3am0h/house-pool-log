@@ -6,64 +6,54 @@
 <title>House Pool Log</title>
 
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 
 <style>
-body { font-family: system-ui, sans-serif; padding:16px; max-width:500px; margin:auto; }
+body { font-family: system-ui, sans-serif; padding:16px; max-width:650px; margin:auto; }
 h2 { margin-top:20px; }
-button { width:100%; padding:14px; font-size:18px; margin-top:8px; }
-button:disabled { opacity:0.4; }
-select,input { width:100%; padding:10px; font-size:16px; margin-top:6px; }
-.row { margin-bottom:16px; }
-
-.standings-box { background:#f4f4f4; padding:12px; border-radius:6px; margin-bottom:12px; }
-.standings-row { display:flex; justify-content:space-between; margin-bottom:4px; }
+button { width:100%; padding:12px; font-size:16px; margin-top:8px; }
+select,input { width:100%; padding:8px; font-size:15px; margin-top:6px; }
+.row { margin-bottom:20px; }
+.box { background:#f4f4f4; padding:12px; border-radius:6px; margin-bottom:12px; }
+.stat-line { margin-bottom:4px; }
 .leader { font-weight:bold; color:#0a7d2c; }
-.small-note { font-size:12px; color:#555; }
-
-.tally { background:#f4f4f4; padding:12px; border-radius:6px; }
-.past-day { border-bottom:1px solid #ddd; margin-bottom:8px; padding-bottom:6px; }
-
-.qr-section { margin-top:40px; padding-top:20px; border-top:1px solid #ddd; text-align:center; color:#555; }
-#qrcode { margin-top:12px; display:flex; justify-content:center; }
+.small { font-size:13px; color:#555; }
 </style>
 </head>
 <body>
 
 <h1>🎱 House Pool Log</h1>
 
-<!-- STANDINGS -->
-<div class="row">
-  <div class="standings-box">
-    <h2>🏆 Overall Standings</h2>
-    <div id="overallStandings"></div>
-    <div id="overallTotal" class="small-note"></div>
-  </div>
-
-  <div class="standings-box">
-    <h2>🔥 Current Streak</h2>
-    <div id="streak"></div>
-  </div>
-
-  <div class="standings-box">
-    <h2>📅 This Month</h2>
-    <div id="monthStandings"></div>
-  </div>
-
-  <div class="standings-box">
-    <h2>📆 This Year</h2>
-    <div id="yearStandings"></div>
-  </div>
+<div class="row box">
+  <h2>🏆 Overall Standings</h2>
+  <div id="overall"></div>
 </div>
 
-<!-- ADD PLAYER -->
+<div class="row box">
+  <h2>🔥 Streaks</h2>
+  <div id="streaks"></div>
+</div>
+
+<div class="row box">
+  <h2>🤝 Head-to-Head</h2>
+  <div id="h2h"></div>
+</div>
+
+<div class="row box">
+  <h2>📊 Advanced Stats</h2>
+  <div id="advanced"></div>
+</div>
+
+<div class="row box">
+  <h2>🕙 Last 10 Games</h2>
+  <div id="last10"></div>
+</div>
+
 <div class="row">
   <h2>Add Player</h2>
   <input id="newPlayer" placeholder="Player name"/>
   <button id="addPlayerBtn">Add Player</button>
 </div>
 
-<!-- AT TABLE -->
 <div class="row">
   <h2>At the Table</h2>
   <select id="player1"></select>
@@ -74,11 +64,6 @@ select,input { width:100%; padding:10px; font-size:16px; margin-top:6px; }
     <option value="Solids">Solids</option>
     <option value="Stripes">Stripes</option>
   </select>
-</div>
-
-<!-- LOG WIN -->
-<div class="row">
-  <h2>Log Win</h2>
 
   <select id="endCondition">
     <option value="">(Optional) End Condition</option>
@@ -88,28 +73,8 @@ select,input { width:100%; padding:10px; font-size:16px; margin-top:6px; }
     <option>Opponent missed 8</option>
   </select>
 
-  <button id="p1WinBtn" disabled>Player 1 Won</button>
-  <button id="p2WinBtn" disabled>Player 2 Won</button>
-  <button id="undoBtn">Undo Last Game</button>
-</div>
-
-<!-- TODAY -->
-<div class="row">
-  <h2>Today</h2>
-  <div id="todayLabel"></div>
-  <div id="tally" class="tally"></div>
-</div>
-
-<!-- PAST -->
-<div class="row">
-  <h2>Past Days</h2>
-  <div id="pastDays"></div>
-</div>
-
-<!-- QR -->
-<div class="qr-section">
-  <div>Scan to open this app</div>
-  <div id="qrcode"></div>
+  <button id="p1WinBtn">Player 1 Won</button>
+  <button id="p2WinBtn">Player 2 Won</button>
 </div>
 
 <script>
@@ -120,64 +85,146 @@ const SUPABASE_URL = "https://wybycecwkvrukcfoqgpa.supabase.co";
 const SUPABASE_KEY = "sb_publishable_nNpJJg1ZBcQSjbX1HhPeKg_5KeR8ngb";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const el = {
-  newPlayer: document.getElementById("newPlayer"),
-  addPlayerBtn: document.getElementById("addPlayerBtn"),
-  player1: document.getElementById("player1"),
-  player2: document.getElementById("player2"),
-  grouping: document.getElementById("grouping"),
-  endCondition: document.getElementById("endCondition"),
-  p1WinBtn: document.getElementById("p1WinBtn"),
-  p2WinBtn: document.getElementById("p2WinBtn"),
-  undoBtn: document.getElementById("undoBtn"),
-  todayLabel: document.getElementById("todayLabel"),
-  tally: document.getElementById("tally"),
-  pastDays: document.getElementById("pastDays")
-};
-
-const todayKey = new Date().toISOString().slice(0,10);
-el.todayLabel.textContent = new Date().toLocaleDateString();
-
+const K = 20;
 let players = [], games = [];
 
-const dayKey = g => (g.date || "").slice(0,10);
-
 async function loadData(){
-  players = (await sb.from("players").select("name").order("name")).data || [];
-  players = players.map(p => p.name);
-  games = (await sb.from("games").select("*").order("date",{ascending:false})).data || [];
-  refresh();
+  players = (await sb.from("players").select("name").order("name")).data?.map(p=>p.name) || [];
+  games = (await sb.from("games").select("*").order("date",{ascending:true})).data || [];
+  render();
 }
 
 async function addPlayer(){
-  const name = el.newPlayer.value.trim();
+  const name = document.getElementById("newPlayer").value.trim();
   if(!name) return;
   await sb.from("players").insert({ name });
-  el.newPlayer.value = "";
+  document.getElementById("newPlayer").value = "";
   loadData();
 }
 
 async function logWin(which){
-  const p1 = el.player1.value;
-  const p2 = el.player2.value;
-  if(!p1 || !p2 || p1 === p2) return;
+  const p1 = document.getElementById("player1").value;
+  const p2 = document.getElementById("player2").value;
+  if(!p1 || !p2 || p1===p2) return;
 
-  const p1_group = el.grouping.value || null;
-  const p2_group =
-    p1_group === "Solids" ? "Stripes" :
-    p1_group === "Stripes" ? "Solids" : null;
+  const grouping = document.getElementById("grouping").value;
+  const endCondition = document.getElementById("endCondition").value;
+
+  const p1_group = grouping || null;
+  const p2_group = grouping==="Solids"?"Stripes":grouping==="Stripes"?"Solids":null;
 
   await sb.from("games").insert({
-    player1: p1,
-    player2: p2,
-    winner: which === 1 ? p1 : p2,
+    player1:p1,
+    player2:p2,
+    winner:which===1?p1:p2,
     p1_group,
     p2_group,
-    end_condition: el.endCondition.value || null,
-    date: new Date().toISOString()
+    end_condition:endCondition||null,
+    date:new Date().toISOString()
   });
 
-  el.grouping.value = "";
-  el.endCondition.value = "";
   loadData();
 }
+
+function compute(){
+  const stats={}, elo={}, currentStreak={}, longest={}, solids={}, conditions={};
+  let last10 = games.slice(-10);
+
+  games.forEach(g=>{
+    [g.player1,g.player2].forEach(p=>{
+      if(!stats[p]) stats[p]={w:0,l:0};
+      if(!elo[p]) elo[p]=1000;
+      if(!currentStreak[p]) currentStreak[p]=0;
+      if(!longest[p]) longest[p]=0;
+      if(!solids[p]) solids[p]={Solids:0,Stripes:0};
+      if(!conditions[p]) conditions[p]={};
+    });
+
+    const winner=g.winner;
+    const loser=winner===g.player1?g.player2:g.player1;
+
+    stats[winner].w++;
+    stats[loser].l++;
+
+    currentStreak[winner]++;
+    currentStreak[loser]=0;
+    longest[winner]=Math.max(longest[winner],currentStreak[winner]);
+
+    if(g.p1_group==="Solids") solids[g.player1].Solids++;
+    if(g.p1_group==="Stripes") solids[g.player1].Stripes++;
+    if(g.p2_group==="Solids") solids[g.player2].Solids++;
+    if(g.p2_group==="Stripes") solids[g.player2].Stripes++;
+
+    if(g.end_condition){
+      conditions[winner][g.end_condition]=(conditions[winner][g.end_condition]||0)+1;
+    }
+
+    const expected=1/(1+Math.pow(10,(elo[loser]-elo[winner])/400));
+    elo[winner]+=K*(1-expected);
+    elo[loser]+=K*(0-(1-expected));
+  });
+
+  return {stats,elo,longest,solids,conditions,last10};
+}
+
+function render(){
+  const {stats,elo,longest,solids,conditions,last10}=compute();
+
+  let overall="";
+  Object.entries(stats).sort((a,b)=>b[1].w-a[1].w).forEach(([p,s],i)=>{
+    const total=s.w+s.l;
+    const pct=total?((s.w/total)*100).toFixed(1):0;
+    overall+=`<div class="stat-line ${i===0?'leader':''}">
+      ${p}: ${s.w}-${s.l} (${pct}%) | ELO ${Math.round(elo[p])}
+    </div>`;
+  });
+  document.getElementById("overall").innerHTML=overall;
+
+  let streakHTML="";
+  Object.entries(longest).forEach(([p,val])=>{
+    streakHTML+=`<div>${p}: Longest ${val}</div>`;
+  });
+  document.getElementById("streaks").innerHTML=streakHTML;
+
+  if(players.length>=2){
+    const p1=players[0], p2=players[1];
+    const h2hWins=games.filter(g=>g.winner===p1&&g.player1===p2||g.player2===p2).length;
+    document.getElementById("h2h").innerHTML=`${p1} vs ${p2}`;
+  }
+
+  let adv="";
+  Object.entries(solids).forEach(([p,s])=>{
+    adv+=`<div>${p}: Solids ${s.Solids}, Stripes ${s.Stripes}</div>`;
+    const clean=(conditions[p]["Clean win"]||0);
+    const total=stats[p]?.w||0;
+    const cleanPct=total?((clean/total)*100).toFixed(1):0;
+    adv+=`<div class="small">${p} Clean Win %: ${cleanPct}%</div>`;
+  });
+  document.getElementById("advanced").innerHTML=adv;
+
+  let l10="";
+  last10.forEach(g=>{
+    l10+=`<div>${g.winner} beat ${g.winner===g.player1?g.player2:g.player1}</div>`;
+  });
+  document.getElementById("last10").innerHTML=l10;
+
+  refreshDropdowns();
+}
+
+function refreshDropdowns(){
+  ["player1","player2"].forEach(id=>{
+    const sel=document.getElementById(id);
+    sel.innerHTML="<option value=''>Select player</option>";
+    players.forEach(p=>sel.innerHTML+=`<option>${p}</option>`);
+  });
+}
+
+document.getElementById("addPlayerBtn").onclick=addPlayer;
+document.getElementById("p1WinBtn").onclick=()=>logWin(1);
+document.getElementById("p2WinBtn").onclick=()=>logWin(2);
+
+loadData();
+})();
+</script>
+</body>
+</html>
