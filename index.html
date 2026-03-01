@@ -18,36 +18,21 @@ select,input { width:100%; padding:8px; font-size:15px; margin-top:6px; }
 .leader { font-weight:bold; color:#0a7d2c; }
 .small { font-size:13px; color:#555; }
 .version { font-size:12px; color:#777; margin-bottom:10px; }
+.status { margin-top:10px; font-weight:bold; }
+.success { color:#0a7d2c; }
+.error { color:#b00020; }
 </style>
 </head>
 <body>
 
 <h1>🎱 House Pool Log</h1>
-<div class="version">Version 2.1.0</div>
+<div class="version">Version 2.2.0</div>
+
+<div id="status" class="status"></div>
 
 <div class="row box">
   <h2>🏆 Overall Standings</h2>
   <div id="overall"></div>
-</div>
-
-<div class="row box">
-  <h2>🔥 Streaks</h2>
-  <div id="streaks"></div>
-</div>
-
-<div class="row box">
-  <h2>🤝 Head-to-Head</h2>
-  <div id="h2h"></div>
-</div>
-
-<div class="row box">
-  <h2>📊 Advanced Stats</h2>
-  <div id="advanced"></div>
-</div>
-
-<div class="row box">
-  <h2>🕙 Last 10 Games</h2>
-  <div id="last10"></div>
 </div>
 
 <div class="row">
@@ -58,13 +43,11 @@ select,input { width:100%; padding:8px; font-size:15px; margin-top:6px; }
 
 <div class="row">
   <h2>At the Table</h2>
-
   <select id="player1"></select>
   <select id="player2"></select>
 
-  <label id="groupLabel">(Optional) Group</label>
   <select id="grouping">
-    <option value="">(Optional)</option>
+    <option value="">(Optional) Group</option>
     <option value="Solids">Solids</option>
     <option value="Stripes">Stripes</option>
   </select>
@@ -85,7 +68,7 @@ select,input { width:100%; padding:8px; font-size:15px; margin-top:6px; }
 (() => {
 "use strict";
 
-const VERSION = "2.1.0";
+const VERSION = "2.2.0";
 
 const SUPABASE_URL = "https://wybycecwkvrukcfoqgpa.supabase.co";
 const SUPABASE_KEY = "sb_publishable_nNpJJg1ZBcQSjbX1HhPeKg_5KeR8ngb";
@@ -94,23 +77,31 @@ console.log("House Pool Log v" + VERSION);
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const K = 20;
 let players = [], games = [];
+
+function setStatus(msg, type="success"){
+  const el = document.getElementById("status");
+  el.className = "status " + (type === "error" ? "error" : "success");
+  el.innerText = msg;
+  setTimeout(()=> el.innerText = "", 4000);
+}
 
 async function loadData(){
   const { data: playerData, error: playerError } =
     await sb.from("players").select("name").order("name");
 
-  if (playerError) console.error("Players error:", playerError);
+  if (playerError) {
+    console.error(playerError);
+    setStatus("Error loading players", "error");
+  }
 
   players = playerData?.map(p=>p.name) || [];
 
-  const { data: gameData, error: gameError } =
+  const { data: gameData } =
     await sb.from("games").select("*").order("date",{ascending:true});
 
-  if (gameError) console.error("Games error:", gameError);
-
   games = gameData || [];
+
   render();
 }
 
@@ -119,8 +110,14 @@ async function addPlayer(){
   if(!name) return;
 
   const { error } = await sb.from("players").insert({ name });
-  if(error) console.error(error);
 
+  if(error){
+    console.error(error);
+    setStatus("Error adding player", "error");
+    return;
+  }
+
+  setStatus("Player added!");
   document.getElementById("newPlayer").value = "";
   loadData();
 }
@@ -128,46 +125,46 @@ async function addPlayer(){
 async function logWin(which){
   const p1 = document.getElementById("player1").value;
   const p2 = document.getElementById("player2").value;
-  if(!p1 || !p2 || p1===p2) return;
+
+  if(!p1 || !p2 || p1===p2){
+    setStatus("Select two different players", "error");
+    return;
+  }
 
   const grouping = document.getElementById("grouping").value;
   const endCondition = document.getElementById("endCondition").value;
 
-  const p1_group = grouping || null;
-  const p2_group = grouping==="Solids"?"Stripes":grouping==="Stripes"?"Solids":null;
+  const payload = {
+    player1: p1,
+    player2: p2,
+    winner: which===1 ? p1 : p2,
+    p1_group: grouping || null,
+    p2_group: grouping==="Solids"?"Stripes":
+              grouping==="Stripes"?"Solids":null,
+    end_condition: endCondition || null,
+    date: new Date().toISOString()
+  };
 
-  const { error } = await sb.from("games").insert({
-    player1:p1,
-    player2:p2,
-    winner:which===1?p1:p2,
-    p1_group,
-    p2_group,
-    end_condition:endCondition||null,
-    date:new Date().toISOString()
-  });
+  const { error } = await sb.from("games").insert(payload);
 
-  if(error) console.error(error);
+  if(error){
+    console.error("Insert error:", error);
+    setStatus("Game failed to log", "error");
+    return;
+  }
 
+  setStatus("Game logged successfully!");
+  document.getElementById("grouping").value="";
+  document.getElementById("endCondition").value="";
   loadData();
 }
 
-function updateLabels(){
-  const p1 = document.getElementById("player1").value || "Player 1";
-  const p2 = document.getElementById("player2").value || "Player 2";
+function render(){
+  const stats = {};
 
-  document.getElementById("p1WinBtn").innerText = `${p1} Won`;
-  document.getElementById("p2WinBtn").innerText = `${p2} Won`;
-
-  document.getElementById("groupLabel").innerText =
-    p1 !== "Player 1" ? `${p1} Group (Optional)` : "(Optional) Group";
-}
-
-function compute(){
-  const stats={}, elo={};
   games.forEach(g=>{
     [g.player1,g.player2].forEach(p=>{
       if(!stats[p]) stats[p]={w:0,l:0};
-      if(!elo[p]) elo[p]=1000;
     });
 
     const winner=g.winner;
@@ -175,31 +172,16 @@ function compute(){
 
     stats[winner].w++;
     stats[loser].l++;
-
-    const expected=1/(1+Math.pow(10,(elo[loser]-elo[winner])/400));
-    elo[winner]+=K*(1-expected);
-    elo[loser]+=K*(0-(1-expected));
   });
 
-  return {stats,elo};
-}
-
-function render(){
-  const {stats,elo}=compute();
-
-  let overall="";
-  Object.entries(stats).sort((a,b)=>b[1].w-a[1].w).forEach(([p,s],i)=>{
-    const total=s.w+s.l;
-    const pct=total?((s.w/total)*100).toFixed(1):0;
-    overall+=`<div class="stat-line ${i===0?'leader':''}">
-      ${p}: ${s.w}-${s.l} (${pct}%) | ELO ${Math.round(elo[p])}
-    </div>`;
+  let html="";
+  Object.entries(stats).forEach(([p,s])=>{
+    html+=`<div>${p}: ${s.w}-${s.l}</div>`;
   });
 
-  document.getElementById("overall").innerHTML=overall;
+  document.getElementById("overall").innerHTML=html;
 
   refreshDropdowns();
-  updateLabels();
 }
 
 function refreshDropdowns(){
@@ -214,8 +196,6 @@ function refreshDropdowns(){
 document.getElementById("addPlayerBtn").onclick=addPlayer;
 document.getElementById("p1WinBtn").onclick=()=>logWin(1);
 document.getElementById("p2WinBtn").onclick=()=>logWin(2);
-document.getElementById("player1").onchange=updateLabels;
-document.getElementById("player2").onchange=updateLabels;
 
 loadData();
 })();
