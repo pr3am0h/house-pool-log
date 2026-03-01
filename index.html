@@ -56,11 +56,13 @@ select,input { width:100%; padding:8px; font-size:15px; margin-top:6px; }
 
 <div class="row">
   <h2>At the Table</h2>
+
   <select id="player1"></select>
   <select id="player2"></select>
 
+  <label id="groupLabel">(Optional) Group</label>
   <select id="grouping">
-    <option value="">(Optional) Group</option>
+    <option value="">(Optional)</option>
     <option value="Solids">Solids</option>
     <option value="Stripes">Stripes</option>
   </select>
@@ -82,7 +84,7 @@ select,input { width:100%; padding:8px; font-size:15px; margin-top:6px; }
 "use strict";
 
 const SUPABASE_URL = "https://wybycecwkvrukcfoqgpa.supabase.co";
-const SUPABASE_KEY = "sb_publishable_nNpJJg1ZBcQSjbX1HhPeKg_5KeR8ngb";
+const SUPABASE_KEY = "YOUR_PUBLIC_KEY";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const K = 20;
@@ -124,6 +126,17 @@ async function logWin(which){
   });
 
   loadData();
+}
+
+function updateLabels(){
+  const p1 = document.getElementById("player1").value || "Player 1";
+  const p2 = document.getElementById("player2").value || "Player 2";
+
+  document.getElementById("p1WinBtn").innerText = `${p1} Won`;
+  document.getElementById("p2WinBtn").innerText = `${p2} Won`;
+
+  document.getElementById("groupLabel").innerText =
+    p1 !== "Player 1" ? `${p1} Group (Optional)` : "(Optional) Group";
 }
 
 function compute(){
@@ -180,48 +193,24 @@ function render(){
   });
   document.getElementById("overall").innerHTML=overall;
 
-  let streakHTML="";
-  Object.entries(longest).forEach(([p,val])=>{
-    streakHTML+=`<div>${p}: Longest ${val}</div>`;
-  });
-  document.getElementById("streaks").innerHTML=streakHTML;
-
-  if(players.length>=2){
-    const p1=players[0], p2=players[1];
-    const h2hWins=games.filter(g=>g.winner===p1&&g.player1===p2||g.player2===p2).length;
-    document.getElementById("h2h").innerHTML=`${p1} vs ${p2}`;
-  }
-
-  let adv="";
-  Object.entries(solids).forEach(([p,s])=>{
-    adv+=`<div>${p}: Solids ${s.Solids}, Stripes ${s.Stripes}</div>`;
-    const clean=(conditions[p]["Clean win"]||0);
-    const total=stats[p]?.w||0;
-    const cleanPct=total?((clean/total)*100).toFixed(1):0;
-    adv+=`<div class="small">${p} Clean Win %: ${cleanPct}%</div>`;
-  });
-  document.getElementById("advanced").innerHTML=adv;
-
-  let l10="";
-  last10.forEach(g=>{
-    l10+=`<div>${g.winner} beat ${g.winner===g.player1?g.player2:g.player1}</div>`;
-  });
-  document.getElementById("last10").innerHTML=l10;
-
   refreshDropdowns();
+  updateLabels();
 }
 
 function refreshDropdowns(){
   ["player1","player2"].forEach(id=>{
     const sel=document.getElementById(id);
+    const current=sel.value;
     sel.innerHTML="<option value=''>Select player</option>";
-    players.forEach(p=>sel.innerHTML+=`<option>${p}</option>`);
+    players.forEach(p=>sel.innerHTML+=`<option ${p===current?'selected':''}>${p}</option>`);
   });
 }
 
 document.getElementById("addPlayerBtn").onclick=addPlayer;
 document.getElementById("p1WinBtn").onclick=()=>logWin(1);
 document.getElementById("p2WinBtn").onclick=()=>logWin(2);
+document.getElementById("player1").onchange=updateLabels;
+document.getElementById("player2").onchange=updateLabels;
 
 loadData();
 })();
