@@ -6,129 +6,766 @@
 <title>House Pool Log</title>
 
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 
 <style>
-body { font-family: system-ui, sans-serif; padding:16px; max-width:650px; margin:auto; }
-h2 { margin-top:20px; }
-button { width:100%; padding:12px; font-size:16px; margin-top:8px; }
-select,input { width:100%; padding:8px; font-size:15px; margin-top:6px; }
-.row { margin-bottom:20px; }
-.box { background:#f4f4f4; padding:12px; border-radius:6px; margin-bottom:12px; }
-.stat-line { margin-bottom:4px; }
-.leader { font-weight:bold; color:#0a7d2c; }
-.small { font-size:13px; color:#555; }
-.version { font-size:12px; color:#777; margin-bottom:10px; }
-.status { margin-top:10px; font-weight:bold; }
-.success { color:#0a7d2c; }
-.error { color:#b00020; }
+  :root{
+    --bg:#f6f7fb;
+    --card:#ffffff;
+    --muted:#6b7280;
+    --text:#111827;
+    --line:#e5e7eb;
+    --good:#0a7d2c;
+    --bad:#b00020;
+    --shadow:0 2px 10px rgba(0,0,0,0.06);
+    --radius:12px;
+  }
+
+  body{ font-family: system-ui, sans-serif; padding:16px; max-width:900px; margin:auto; background:var(--bg); color:var(--text); }
+  h1{ margin:4px 0 2px; }
+  h2{ margin:0 0 10px; font-size:18px; }
+  h3{ margin:0 0 8px; font-size:16px; }
+  .version{ font-size:12px; color:var(--muted); margin-bottom:14px; }
+  .grid{ display:grid; grid-template-columns: 1fr; gap:14px; }
+  @media(min-width:860px){ .grid{ grid-template-columns: 1fr 1fr; } }
+
+  .card{
+    background:var(--card);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    padding:14px;
+  }
+
+  .row{ display:flex; gap:10px; flex-wrap:wrap; }
+  .row > * { flex: 1 1 160px; }
+  .btnrow{ display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
+  .btnrow > button{ flex: 1 1 160px; }
+
+  button{
+    padding:10px 12px;
+    border:1px solid var(--line);
+    border-radius:10px;
+    background:#fff;
+    cursor:pointer;
+    font-weight:600;
+  }
+  button:hover{ filter:brightness(0.98); }
+  button:disabled{ opacity:.5; cursor:not-allowed; }
+
+  select,input{
+    width:100%;
+    padding:10px 12px;
+    border:1px solid var(--line);
+    border-radius:10px;
+    background:#fff;
+    font-size:14px;
+  }
+
+  .status{ font-weight:700; margin:12px 0; }
+  .success{ color:var(--good); }
+  .error{ color:var(--bad); }
+
+  .pill{
+    display:inline-block;
+    font-size:12px;
+    padding:3px 8px;
+    border-radius:999px;
+    background:#eef2ff;
+    color:#3730a3;
+    border:1px solid #e0e7ff;
+    margin-left:8px;
+  }
+
+  .standings-item{
+    padding:10px;
+    border:1px solid var(--line);
+    border-radius:10px;
+    margin-bottom:8px;
+  }
+  .leader{ background:#ecfdf3; border-color:#b7f7cd; }
+
+  .muted{ color:var(--muted); font-size:12px; }
+  .kpi{
+    display:grid;
+    grid-template-columns: repeat(2, minmax(0,1fr));
+    gap:10px;
+  }
+  @media(min-width:860px){ .kpi{ grid-template-columns: repeat(4, minmax(0,1fr)); } }
+  .kpi .box{
+    padding:10px;
+    border:1px solid var(--line);
+    border-radius:10px;
+    background:#fff;
+  }
+  .kpi .label{ font-size:12px; color:var(--muted); }
+  .kpi .value{ font-size:18px; font-weight:800; margin-top:2px; }
+
+  details summary{
+    cursor:pointer;
+    font-weight:800;
+    padding:10px;
+    border:1px solid var(--line);
+    border-radius:10px;
+    background:#fff;
+    list-style:none;
+  }
+  details summary::-webkit-details-marker { display:none; }
+  details .content{ margin-top:10px; }
+
+  .game{
+    padding:10px 0;
+    border-bottom:1px solid var(--line);
+  }
+  .game:last-child{ border-bottom:none; }
+  .game .time{ font-size:12px; color:var(--muted); }
+  .game .main{ font-weight:800; margin-top:2px; }
+  .game .meta{ font-size:12px; margin-top:2px; color:#374151; }
+
+  .cards{
+    display:grid;
+    grid-template-columns: 1fr;
+    gap:10px;
+  }
+  @media(min-width:860px){ .cards{ grid-template-columns: 1fr 1fr; } }
+
+  .playercard{
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:12px;
+    background:#fff;
+  }
+  .playercard .name{ font-weight:900; font-size:16px; }
+  .playercard .sub{ font-size:12px; color:var(--muted); margin-top:2px; }
+  .playercard .mini{
+    display:grid;
+    grid-template-columns: repeat(3, minmax(0,1fr));
+    gap:8px;
+    margin-top:10px;
+  }
+  .mini .m{ border:1px solid var(--line); border-radius:10px; padding:8px; }
+  .mini .t{ font-size:11px; color:var(--muted); }
+  .mini .v{ font-size:14px; font-weight:900; margin-top:2px; }
+
+  .barwrap{
+    height:10px;
+    background:#f3f4f6;
+    border:1px solid var(--line);
+    border-radius:999px;
+    overflow:hidden;
+    margin-top:8px;
+  }
+  .bar{ height:100%; width:0%; background:#111827; }
+
+  .right{
+    display:flex; justify-content:space-between; align-items:center; gap:10px;
+  }
+
+  .qrwrap{
+    display:flex; gap:14px; flex-wrap:wrap; align-items:flex-start;
+  }
+  #qr{ background:#fff; padding:10px; border:1px solid var(--line); border-radius:12px; }
+  .note{ font-size:12px; color:var(--muted); }
+
 </style>
 </head>
+
 <body>
+  <h1>🎱 House Pool Log <span class="pill" id="badge">v2.6.0</span></h1>
+  <div class="version">A clean, human-friendly dashboard with history + admin tools</div>
 
-<h1>🎱 House Pool Log</h1>
-<div class="version">Version 2.2.0</div>
+  <div id="status" class="status"></div>
 
-<div id="status" class="status"></div>
+  <!-- Top: KPIs -->
+  <div class="card">
+    <div class="right">
+      <h2>📌 Snapshot</h2>
+      <div class="muted" id="lastUpdate"></div>
+    </div>
+    <div class="kpi">
+      <div class="box">
+        <div class="label">Games total</div>
+        <div class="value" id="kpiGames">0</div>
+      </div>
+      <div class="box">
+        <div class="label">Games today</div>
+        <div class="value" id="kpiToday">0</div>
+      </div>
+      <div class="box">
+        <div class="label">Leader</div>
+        <div class="value" id="kpiLeader">—</div>
+      </div>
+      <div class="box">
+        <div class="label">Last game</div>
+        <div class="value" id="kpiLast">—</div>
+      </div>
+    </div>
+  </div>
 
-<div class="row box">
-  <h2>🏆 Overall Standings</h2>
-  <div id="overall"></div>
-</div>
+  <div class="grid">
 
-<div class="row">
-  <h2>Add Player</h2>
-  <input id="newPlayer" placeholder="Player name"/>
-  <button id="addPlayerBtn">Add Player</button>
-</div>
+    <!-- Left: Standings -->
+    <div class="card">
+      <div class="right">
+        <h2>🏆 Standings</h2>
+        <div class="muted">W–L | Win% | ELO | Streak</div>
+      </div>
+      <div id="standings"></div>
+    </div>
 
-<div class="row">
-  <h2>At the Table</h2>
-  <select id="player1"></select>
-  <select id="player2"></select>
+    <!-- Right: Head-to-Head -->
+    <div class="card">
+      <div class="right">
+        <h2>🤝 Head-to-Head</h2>
+        <div class="muted">Choose 2 players</div>
+      </div>
 
-  <select id="grouping">
-    <option value="">(Optional) Group</option>
-    <option value="Solids">Solids</option>
-    <option value="Stripes">Stripes</option>
-  </select>
+      <div class="row">
+        <select id="h2hA"></select>
+        <select id="h2hB"></select>
+      </div>
+      <div id="h2hBox" class="muted" style="margin-top:10px;">Pick two different players.</div>
+    </div>
 
-  <select id="endCondition">
-    <option value="">(Optional) End Condition</option>
-    <option>Clean win</option>
-    <option>Opponent scratched on 8</option>
-    <option>Opponent sank 8 early</option>
-    <option>Opponent missed 8</option>
-  </select>
+    <!-- Log Game -->
+    <div class="card">
+      <h2>📝 Log Game</h2>
+      <div class="row">
+        <select id="player1"></select>
+        <select id="player2"></select>
+      </div>
 
-  <button id="p1WinBtn">Player 1 Won</button>
-  <button id="p2WinBtn">Player 2 Won</button>
-</div>
+      <div class="row">
+        <select id="grouping">
+          <option value="">Group (Optional)</option>
+          <option value="Solids">Solids</option>
+          <option value="Stripes">Stripes</option>
+        </select>
+
+        <select id="endCondition">
+          <option value="">End Condition (Optional)</option>
+          <option>Clean win</option>
+          <option>Opponent scratched on 8</option>
+          <option>Opponent sank 8 early</option>
+          <option>Opponent missed 8</option>
+        </select>
+      </div>
+
+      <div class="btnrow">
+        <button id="p1WinBtn">Player 1 Won</button>
+        <button id="p2WinBtn">Player 2 Won</button>
+      </div>
+
+      <div class="btnrow" style="margin-top:12px;">
+        <button id="deleteLastBtn">Delete last game</button>
+        <button id="undoBtn">Undo delete</button>
+        <button id="csvBtn">Export CSV</button>
+      </div>
+
+      <div class="note" style="margin-top:10px;">
+        Duplicate guard: prevents logging the same matchup twice within 10 seconds.
+      </div>
+    </div>
+
+    <!-- History -->
+    <div class="card">
+      <h2>🕙 History</h2>
+
+      <details open>
+        <summary>Today’s games</summary>
+        <div class="content" id="todayGames"></div>
+      </details>
+
+      <details>
+        <summary>Recent games (last 15)</summary>
+        <div class="content" id="recentGames"></div>
+      </details>
+    </div>
+
+  </div>
+
+  <!-- Details: Per-player cards + Last 10 trend -->
+  <div class="card">
+    <h2>📊 Details</h2>
+
+    <details>
+      <summary>Per-player stats cards</summary>
+      <div class="content">
+        <div class="muted" style="margin-bottom:10px;">Includes Clean Win %, Solids/Stripes breakdown, and last-10 form.</div>
+        <div class="cards" id="playerCards"></div>
+      </div>
+    </details>
+
+    <details>
+      <summary>Last 10 trend (wins per player)</summary>
+      <div class="content">
+        <div class="muted" style="margin-bottom:10px;">Simple bar showing how many wins each player has in the last 10 games.</div>
+        <div id="last10Trend"></div>
+      </div>
+    </details>
+  </div>
+
+  <!-- Admin -->
+  <div class="card">
+    <div class="right">
+      <h2>🔧 Admin</h2>
+      <label class="muted"><input type="checkbox" id="adminToggle" /> Admin mode</label>
+    </div>
+
+    <div id="adminPanel" style="display:none;">
+      <div class="row">
+        <input id="newPlayer" placeholder="Add player name (admin)" />
+        <button id="addPlayerBtn">Add Player</button>
+      </div>
+
+      <details style="margin-top:10px;">
+        <summary>QR invite</summary>
+        <div class="content">
+          <div class="qrwrap">
+            <div>
+              <div class="muted" style="margin-bottom:8px;">Scan to open the app</div>
+              <div id="qr"></div>
+            </div>
+            <div style="min-width:240px; flex: 1;">
+              <div class="muted">Invite link</div>
+              <input id="inviteLink" readonly />
+              <div class="note" style="margin-top:8px;">If you change your GitHub Pages URL, update this link.</div>
+            </div>
+          </div>
+        </div>
+      </details>
+    </div>
+  </div>
 
 <script>
 (() => {
 "use strict";
 
-const VERSION = "2.2.0";
-
+/*** CONFIG ***/
+const VERSION = "2.6.0";
 const SUPABASE_URL = "https://wybycecwkvrukcfoqgpa.supabase.co";
-const SUPABASE_KEY = "sb_publishable_nNpJJg1ZBcQSjbX1HhPeKg_5KeR8ngb";
+const SUPABASE_KEY = "sb_publishable_nNpJJg1ZBcQSjbX1HhPeKg_5KeR8ngb"; // your publishable key
+const K = 20;
+const DUP_GUARD_SECONDS = 10;
 
-console.log("House Pool Log v" + VERSION);
-
+/*** STATE ***/
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let players = [];
+let games = [];
+let lastDeleted = null;
 
-let players = [], games = [];
-
+/*** UI HELPERS ***/
 function setStatus(msg, type="success"){
   const el = document.getElementById("status");
   el.className = "status " + (type === "error" ? "error" : "success");
-  el.innerText = msg;
-  setTimeout(()=> el.innerText = "", 4000);
+  el.textContent = msg;
+  setTimeout(() => { el.textContent = ""; }, 3500);
 }
 
-async function loadData(){
-  const { data: playerData, error: playerError } =
-    await sb.from("players").select("name").order("name");
+function fmtDate(ts){
+  const d = new Date(ts);
+  return d.toLocaleString(undefined, {
+    month:"short", day:"numeric", year:"numeric",
+    hour:"numeric", minute:"2-digit"
+  });
+}
 
-  if (playerError) {
-    console.error(playerError);
-    setStatus("Error loading players", "error");
+function todayKey(){
+  return new Date().toDateString();
+}
+
+function safeText(v){ return (v === null || v === undefined) ? "" : String(v); }
+
+function csvEscape(val){
+  const s = safeText(val);
+  if (/[",\n]/.test(s)) return '"' + s.replace(/"/g,'""') + '"';
+  return s;
+}
+
+/*** DATA LOAD ***/
+async function loadData(){
+  const { data: pData, error: pErr } = await sb.from("players").select("name").order("name");
+  if (pErr) console.error(pErr);
+  players = pData?.map(p => p.name) || [];
+
+  const { data: gData, error: gErr } = await sb.from("games").select("*").order("date",{ascending:false});
+  if (gErr) console.error(gErr);
+  games = gData || [];
+
+  document.getElementById("lastUpdate").textContent =
+    games[0]?.date ? ("Updated " + fmtDate(games[0].date)) : "No games yet";
+
+  renderAll();
+}
+
+/*** COMPUTE: standings, ELO, streaks, breakdowns ***/
+function computeStats(){
+  const stats = {};        // {p:{w,l}}
+  const elo = {};          // {p:number}
+  const curStreak = {};    // {p:number} current
+  const longest = {};      // {p:number}
+  const solids = {};       // {p:{Solids,Stripes}}
+  const conditions = {};   // {p:{condition:count}}
+  const h2h = {};          // {"A|B":{A:count,B:count}}
+  const last10 = games.slice(0,10);
+  const last10Wins = {};   // {p:wins in last10}
+  const cleanWin = {};     // {p: count clean win}
+
+  // process chronological for streak + elo stability
+  const chrono = games.slice().reverse();
+
+  chrono.forEach(g => {
+    const p1 = g.player1, p2 = g.player2;
+    [p1,p2].forEach(p=>{
+      if(!stats[p]) stats[p]={w:0,l:0};
+      if(!elo[p]) elo[p]=1000;
+      if(curStreak[p] === undefined) curStreak[p]=0;
+      if(!longest[p]) longest[p]=0;
+      if(!solids[p]) solids[p]={Solids:0,Stripes:0};
+      if(!conditions[p]) conditions[p]={};
+      if(cleanWin[p] === undefined) cleanWin[p]=0;
+    });
+
+    const winner = g.winner;
+    const loser = winner===p1 ? p2 : p1;
+
+    stats[winner].w++;
+    stats[loser].l++;
+
+    // streaks
+    curStreak[winner] += 1;
+    curStreak[loser] = 0;
+    longest[winner] = Math.max(longest[winner], curStreak[winner]);
+
+    // solids/stripes counts (for each player)
+    if (g.p1_group === "Solids") solids[p1].Solids++;
+    if (g.p1_group === "Stripes") solids[p1].Stripes++;
+    if (g.p2_group === "Solids") solids[p2].Solids++;
+    if (g.p2_group === "Stripes") solids[p2].Stripes++;
+
+    // end condition counts (winner only, like your earlier logic)
+    if (g.end_condition){
+      conditions[winner][g.end_condition] = (conditions[winner][g.end_condition] || 0) + 1;
+      if (g.end_condition === "Clean win") cleanWin[winner] += 1;
+    }
+
+    // ELO update
+    const expected = 1/(1+Math.pow(10,(elo[loser]-elo[winner])/400));
+    elo[winner] += K*(1-expected);
+    elo[loser]  += K*(0-(1-expected));
+
+    // head-to-head
+    const a = [p1,p2].sort();
+    const key = a[0] + "|" + a[1];
+    if(!h2h[key]) h2h[key] = {};
+    h2h[key][winner] = (h2h[key][winner] || 0) + 1;
+  });
+
+  // last 10 wins
+  last10.forEach(g=>{
+    last10Wins[g.winner] = (last10Wins[g.winner] || 0) + 1;
+  });
+
+  return { stats, elo, curStreak, longest, solids, conditions, h2h, last10, last10Wins, cleanWin };
+}
+
+/*** RENDER ***/
+function renderAll(){
+  const computed = computeStats();
+  renderKPIs(computed);
+  renderStandings(computed);
+  renderHistory();
+  renderH2H(computed);
+  renderPlayerCards(computed);
+  renderLast10Trend(computed);
+  refreshDropdowns();
+  refreshH2HDropdowns();
+  syncButtons();
+  syncAdmin();
+}
+
+function renderKPIs({ stats, elo }){
+  document.getElementById("kpiGames").textContent = games.length;
+
+  const today = todayKey();
+  const todayGames = games.filter(g => new Date(g.date).toDateString() === today);
+  document.getElementById("kpiToday").textContent = todayGames.length;
+
+  // leader by wins then elo
+  const entries = Object.entries(stats);
+  if(entries.length){
+    entries.sort((a,b)=>{
+      if(b[1].w !== a[1].w) return b[1].w - a[1].w;
+      return (elo[b[0]]||0) - (elo[a[0]]||0);
+    });
+    document.getElementById("kpiLeader").textContent = entries[0][0];
+  } else {
+    document.getElementById("kpiLeader").textContent = "—";
   }
 
-  players = playerData?.map(p=>p.name) || [];
-
-  const { data: gameData } =
-    await sb.from("games").select("*").order("date",{ascending:true});
-
-  games = gameData || [];
-
-  render();
+  const last = games[0];
+  document.getElementById("kpiLast").textContent = last ? (last.winner) : "—";
 }
 
-async function addPlayer(){
-  const name = document.getElementById("newPlayer").value.trim();
-  if(!name) return;
+function renderStandings({ stats, elo, curStreak, longest }){
+  const container = document.getElementById("standings");
+  const entries = Object.entries(stats);
 
-  const { error } = await sb.from("players").insert({ name });
-
-  if(error){
-    console.error(error);
-    setStatus("Error adding player", "error");
+  if(!entries.length){
+    container.innerHTML = "<div class='muted'>No games yet. Log one to start.</div>";
     return;
   }
 
-  setStatus("Player added!");
-  document.getElementById("newPlayer").value = "";
-  loadData();
+  entries.sort((a,b)=>{
+    // primary: win%
+    const aw=a[1].w, al=a[1].l, at=aw+al;
+    const bw=b[1].w, bl=b[1].l, bt=bw+bl;
+    const ap=at?aw/at:0, bp=bt?bw/bt:0;
+    if(bp!==ap) return bp-ap;
+    // secondary: wins
+    if(bw!==aw) return bw-aw;
+    // tertiary: ELO
+    return (elo[b[0]]||0) - (elo[a[0]]||0);
+  });
+
+  container.innerHTML = entries.map(([p,s],i)=>{
+    const total = s.w + s.l;
+    const pct = total ? ((s.w/total)*100).toFixed(1) : "0.0";
+    const e = Math.round(elo[p]||1000);
+    const cs = curStreak[p] || 0;
+    const ls = longest[p] || 0;
+
+    return `
+      <div class="standings-item ${i===0?'leader':''}">
+        <div class="right">
+          <div style="font-weight:900;">${p}</div>
+          <div class="muted">${s.w}-${s.l} • ${pct}%</div>
+        </div>
+        <div class="right" style="margin-top:6px;">
+          <div><span class="pill">ELO ${e}</span></div>
+          <div class="muted">Streak ${cs} • Best ${ls}</div>
+        </div>
+      </div>
+    `;
+  }).join("");
 }
 
+function renderHistory(){
+  const today = todayKey();
+
+  const todayGames = games.filter(g => new Date(g.date).toDateString() === today);
+  document.getElementById("todayGames").innerHTML = todayGames.length
+    ? todayGames.map(renderGameRow).join("")
+    : "<div class='muted'>No games today.</div>";
+
+  const recent = games.slice(0,15);
+  document.getElementById("recentGames").innerHTML = recent.length
+    ? recent.map(renderGameRow).join("")
+    : "<div class='muted'>No games yet.</div>";
+}
+
+function renderGameRow(g){
+  const opponent = g.winner === g.player1 ? g.player2 : g.player1;
+  const group = (g.winner === g.player1) ? g.p1_group : g.p2_group;
+  const metaParts = [];
+  if(group) metaParts.push(group);
+  if(g.end_condition) metaParts.push(g.end_condition);
+
+  return `
+    <div class="game">
+      <div class="time">${fmtDate(g.date)}</div>
+      <div class="main">${g.winner} beat ${opponent}</div>
+      <div class="meta">${metaParts.join(" • ")}</div>
+    </div>
+  `;
+}
+
+function refreshDropdowns(){
+  const p1 = document.getElementById("player1");
+  const p2 = document.getElementById("player2");
+  const cur1 = p1.value;
+  const cur2 = p2.value;
+
+  p1.innerHTML = `<option value="">Select player 1</option>` + players.map(p=>`<option ${p===cur1?'selected':''}>${p}</option>`).join("");
+  p2.innerHTML = `<option value="">Select player 2</option>` + players.map(p=>`<option ${p===cur2?'selected':''}>${p}</option>`).join("");
+}
+
+function refreshH2HDropdowns(){
+  const a = document.getElementById("h2hA");
+  const b = document.getElementById("h2hB");
+  const ca = a.value, cb = b.value;
+
+  a.innerHTML = `<option value="">Player A</option>` + players.map(p=>`<option ${p===ca?'selected':''}>${p}</option>`).join("");
+  b.innerHTML = `<option value="">Player B</option>` + players.map(p=>`<option ${p===cb?'selected':''}>${p}</option>`).join("");
+}
+
+function renderH2H({ h2h }){
+  const a = document.getElementById("h2hA").value;
+  const b = document.getElementById("h2hB").value;
+  const box = document.getElementById("h2hBox");
+
+  if(!a || !b || a===b){
+    box.innerHTML = "<div class='muted'>Pick two different players.</div>";
+    return;
+  }
+
+  const key = [a,b].sort().join("|");
+  const record = h2h[key] || {};
+  const aWins = record[a] || 0;
+  const bWins = record[b] || 0;
+  const total = aWins + bWins;
+
+  const aPct = total ? Math.round((aWins/total)*100) : 0;
+  const bPct = total ? Math.round((bWins/total)*100) : 0;
+
+  box.innerHTML = `
+    <div class="playercard">
+      <div class="right">
+        <div style="font-weight:900;">${a} vs ${b}</div>
+        <div class="muted">${total} games</div>
+      </div>
+
+      <div style="margin-top:10px;">
+        <div class="right">
+          <div><b>${a}</b> ${aWins}</div>
+          <div class="muted">${aPct}%</div>
+        </div>
+        <div class="barwrap"><div class="bar" style="width:${aPct}%;"></div></div>
+
+        <div class="right" style="margin-top:10px;">
+          <div><b>${b}</b> ${bWins}</div>
+          <div class="muted">${bPct}%</div>
+        </div>
+        <div class="barwrap"><div class="bar" style="width:${bPct}%;"></div></div>
+      </div>
+    </div>
+  `;
+}
+
+function renderPlayerCards({ stats, elo, curStreak, longest, solids, cleanWin }){
+  const wrap = document.getElementById("playerCards");
+  const entries = Object.entries(stats);
+
+  if(!entries.length){
+    wrap.innerHTML = "<div class='muted'>No stats yet.</div>";
+    return;
+  }
+
+  // "form" = wins in last 10
+  const last10 = games.slice(0,10);
+  const formWins = {};
+  last10.forEach(g => { formWins[g.winner] = (formWins[g.winner]||0) + 1; });
+
+  entries.sort((a,b)=> (Math.round(elo[b[0]]||1000) - Math.round(elo[a[0]]||1000)));
+
+  wrap.innerHTML = entries.map(([p,s])=>{
+    const total = s.w+s.l;
+    const pct = total ? ((s.w/total)*100).toFixed(1) : "0.0";
+    const e = Math.round(elo[p]||1000);
+
+    const cw = cleanWin[p] || 0;
+    const cwPct = s.w ? ((cw/s.w)*100).toFixed(1) : "0.0";
+
+    const sol = solids[p]?.Solids || 0;
+    const str = solids[p]?.Stripes || 0;
+    const ssTotal = sol + str;
+    const solPct = ssTotal ? Math.round(sol/ssTotal*100) : 0;
+
+    const cs = curStreak[p] || 0;
+    const ls = longest[p] || 0;
+    const f = formWins[p] || 0;
+
+    return `
+      <div class="playercard">
+        <div class="right">
+          <div class="name">${p}</div>
+          <div class="pill">ELO ${e}</div>
+        </div>
+        <div class="sub">${s.w}-${s.l} • ${pct}% • Last 10 wins: ${f}</div>
+
+        <div class="mini">
+          <div class="m">
+            <div class="t">Streak</div>
+            <div class="v">${cs}</div>
+          </div>
+          <div class="m">
+            <div class="t">Best streak</div>
+            <div class="v">${ls}</div>
+          </div>
+          <div class="m">
+            <div class="t">Clean win %</div>
+            <div class="v">${cwPct}%</div>
+          </div>
+        </div>
+
+        <div style="margin-top:10px;">
+          <div class="right">
+            <div class="muted">Solids vs Stripes</div>
+            <div class="muted">${sol} / ${str}</div>
+          </div>
+          <div class="barwrap">
+            <div class="bar" style="width:${solPct}%;"></div>
+          </div>
+          <div class="note">Bar shows % Solids (based on logged groups)</div>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function renderLast10Trend({ last10Wins }){
+  const el = document.getElementById("last10Trend");
+  const entries = Object.entries(last10Wins);
+
+  if(!games.length){
+    el.innerHTML = "<div class='muted'>No games yet.</div>";
+    return;
+  }
+
+  // show all players even if 0 in last 10
+  const all = players.map(p => [p, last10Wins[p] || 0]);
+  all.sort((a,b)=>b[1]-a[1]);
+
+  const max = Math.max(1, ...all.map(x=>x[1]));
+  el.innerHTML = all.map(([p,w])=>{
+    const pct = Math.round((w/max)*100);
+    return `
+      <div class="standings-item">
+        <div class="right">
+          <div style="font-weight:900;">${p}</div>
+          <div class="muted">${w} wins</div>
+        </div>
+        <div class="barwrap" style="margin-top:8px;">
+          <div class="bar" style="width:${pct}%;"></div>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function syncButtons(){
+  const p1 = document.getElementById("player1").value || "Player 1";
+  const p2 = document.getElementById("player2").value || "Player 2";
+  document.getElementById("p1WinBtn").textContent = `${p1} Won`;
+  document.getElementById("p2WinBtn").textContent = `${p2} Won`;
+}
+
+/*** ACTIONS ***/
 async function logWin(which){
   const p1 = document.getElementById("player1").value;
   const p2 = document.getElementById("player2").value;
-
   if(!p1 || !p2 || p1===p2){
-    setStatus("Select two different players", "error");
+    setStatus("Select two different players.", "error");
     return;
+  }
+
+  // Duplicate guard
+  const last = games[0];
+  if(last){
+    const diff = (Date.now() - new Date(last.date).getTime()) / 1000;
+    if(diff < DUP_GUARD_SECONDS && last.player1===p1 && last.player2===p2){
+      setStatus("Duplicate prevented (same matchup too soon).", "error");
+      return;
+    }
   }
 
   const grouping = document.getElementById("grouping").value;
@@ -139,65 +776,139 @@ async function logWin(which){
     player2: p2,
     winner: which===1 ? p1 : p2,
     p1_group: grouping || null,
-    p2_group: grouping==="Solids"?"Stripes":
-              grouping==="Stripes"?"Solids":null,
+    p2_group: grouping==="Solids" ? "Stripes" : grouping==="Stripes" ? "Solids" : null,
     end_condition: endCondition || null,
     date: new Date().toISOString()
   };
 
   const { error } = await sb.from("games").insert(payload);
-
   if(error){
     console.error("Insert error:", error);
-    setStatus("Game failed to log", "error");
+    setStatus("Game failed to log. Check console for details.", "error");
     return;
   }
 
-  setStatus("Game logged successfully!");
-  document.getElementById("grouping").value="";
-  document.getElementById("endCondition").value="";
-  loadData();
+  setStatus("Game logged ✅");
+  document.getElementById("grouping").value = "";
+  document.getElementById("endCondition").value = "";
+  await loadData();
 }
 
-function render(){
-  const stats = {};
+async function deleteLastGame(){
+  if(!games.length){
+    setStatus("No games to delete.", "error");
+    return;
+  }
+  lastDeleted = games[0];
 
-  games.forEach(g=>{
-    [g.player1,g.player2].forEach(p=>{
-      if(!stats[p]) stats[p]={w:0,l:0};
-    });
-
-    const winner=g.winner;
-    const loser=winner===g.player1?g.player2:g.player1;
-
-    stats[winner].w++;
-    stats[loser].l++;
-  });
-
-  let html="";
-  Object.entries(stats).forEach(([p,s])=>{
-    html+=`<div>${p}: ${s.w}-${s.l}</div>`;
-  });
-
-  document.getElementById("overall").innerHTML=html;
-
-  refreshDropdowns();
+  const { error } = await sb.from("games").delete().eq("id", lastDeleted.id);
+  if(error){
+    console.error(error);
+    setStatus("Delete failed.", "error");
+    lastDeleted = null;
+    return;
+  }
+  setStatus("Last game deleted. You can Undo.");
+  await loadData();
 }
 
-function refreshDropdowns(){
-  ["player1","player2"].forEach(id=>{
-    const sel=document.getElementById(id);
-    const current=sel.value;
-    sel.innerHTML="<option value=''>Select player</option>";
-    players.forEach(p=>sel.innerHTML+=`<option ${p===current?'selected':''}>${p}</option>`);
-  });
+async function undoDelete(){
+  if(!lastDeleted){
+    setStatus("Nothing to undo.", "error");
+    return;
+  }
+  const { error } = await sb.from("games").insert(lastDeleted);
+  if(error){
+    console.error(error);
+    setStatus("Undo failed.", "error");
+    return;
+  }
+  setStatus("Undo successful ✅");
+  lastDeleted = null;
+  await loadData();
 }
 
-document.getElementById("addPlayerBtn").onclick=addPlayer;
-document.getElementById("p1WinBtn").onclick=()=>logWin(1);
-document.getElementById("p2WinBtn").onclick=()=>logWin(2);
+function exportCSV(){
+  if(!games.length){
+    setStatus("No games to export.", "error");
+    return;
+  }
 
+  const headers = ["id","player1","player2","winner","p1_group","p2_group","end_condition","date"];
+  let csv = headers.join(",") + "\n";
+
+  // export chronological (oldest first) for readability
+  const chrono = games.slice().reverse();
+  chrono.forEach(g=>{
+    const row = headers.map(h => csvEscape(g[h]));
+    csv += row.join(",") + "\n";
+  });
+
+  const blob = new Blob([csv], {type:"text/csv"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `house_pool_log_${VERSION}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+
+  setStatus("CSV exported ✅");
+}
+
+/*** ADMIN ***/
+function syncAdmin(){
+  const link = window.location.href;
+  const invite = document.getElementById("inviteLink");
+  invite.value = link;
+
+  // QR
+  const qrEl = document.getElementById("qr");
+  qrEl.innerHTML = "";
+  try{
+    new QRCode(qrEl, { text: link, width: 160, height: 160 });
+  }catch(e){
+    console.warn("QR code lib issue:", e);
+  }
+}
+
+async function addPlayer(){
+  const name = document.getElementById("newPlayer").value.trim();
+  if(!name){
+    setStatus("Enter a player name.", "error");
+    return;
+  }
+  const { error } = await sb.from("players").insert({ name });
+  if(error){
+    console.error(error);
+    setStatus("Add player failed.", "error");
+    return;
+  }
+  document.getElementById("newPlayer").value = "";
+  setStatus("Player added ✅");
+  await loadData();
+}
+
+/*** EVENTS ***/
+document.getElementById("p1WinBtn").onclick = ()=>logWin(1);
+document.getElementById("p2WinBtn").onclick = ()=>logWin(2);
+document.getElementById("deleteLastBtn").onclick = deleteLastGame;
+document.getElementById("undoBtn").onclick = undoDelete;
+document.getElementById("csvBtn").onclick = exportCSV;
+document.getElementById("addPlayerBtn").onclick = addPlayer;
+
+document.getElementById("player1").onchange = () => { syncButtons(); };
+document.getElementById("player2").onchange = () => { syncButtons(); };
+document.getElementById("h2hA").onchange = () => renderH2H(computeStats());
+document.getElementById("h2hB").onchange = () => renderH2H(computeStats());
+
+document.getElementById("adminToggle").onchange = (e)=>{
+  document.getElementById("adminPanel").style.display = e.target.checked ? "block" : "none";
+};
+
+/*** INIT ***/
+document.getElementById("badge").textContent = "v" + VERSION;
 loadData();
+
 })();
 </script>
 </body>
