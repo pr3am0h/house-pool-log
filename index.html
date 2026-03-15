@@ -30,7 +30,6 @@ body{
 }
 h1{margin:4px 0 2px;}
 h2{margin:0 0 10px;font-size:18px;}
-.version{font-size:12px;color:var(--muted);margin-bottom:14px;}
 .grid{display:grid;grid-template-columns:1fr;gap:14px;}
 @media(min-width:860px){.grid{grid-template-columns:1fr 1fr;}}
 
@@ -116,7 +115,7 @@ details .content{margin-top:10px;}
 </head>
 
 <body>
-<h1>🎱 House Pool Log <span class="pill" id="badge">v2.8.0</span></h1>
+<h1>🎱 House Pool Log <span class="pill" id="badge">v2.9.0</span></h1>
 
 <div id="status" class="status"></div>
 
@@ -156,6 +155,10 @@ details .content{margin-top:10px;}
 <button id="p2WinBtn">Player 2 Won</button>
 </div>
 
+<div class="btnrow">
+<button id="rematchBtn">Quick Rematch</button>
+</div>
+
 <div class="row">
 <input id="newPlayer" placeholder="Add new player">
 <button id="addPlayerBtn">Add Player</button>
@@ -185,7 +188,7 @@ details .content{margin-top:10px;}
 <script>
 (() => {
 
-const VERSION="2.8.0";
+const VERSION="2.9.0";
 const SUPABASE_URL="https://wybycecwkvrukcfoqgpa.supabase.co";
 const SUPABASE_KEY="sb_publishable_nNpJJg1ZBcQSjbX1HhPeKg_5KeR8ngb";
 const K=20;
@@ -216,6 +219,7 @@ function updateWinButtons(){
 }
 
 async function loadData(){
+
   const {data:p}=await sb.from("players").select("name").order("name");
   players=p?.map(x=>x.name)||[];
 
@@ -227,43 +231,73 @@ async function loadData(){
 
 function computeStats(){
   const stats={},elo={},streak={};
+
   games.slice().reverse().forEach(g=>{
+
     [g.player1,g.player2].forEach(p=>{
       if(!stats[p])stats[p]={w:0,l:0};
       if(!elo[p])elo[p]=1000;
       if(streak[p]===undefined)streak[p]=0;
     });
+
     const winner=g.winner;
     const loser=winner===g.player1?g.player2:g.player1;
+
     stats[winner].w++;
     stats[loser].l++;
+
     streak[winner]++;
     streak[loser]=0;
+
     const exp=1/(1+Math.pow(10,(elo[loser]-elo[winner])/400));
+
     elo[winner]+=K*(1-exp);
     elo[loser]+=K*(0-(1-exp));
+
   });
+
   return{stats,elo,streak};
 }
 
 function renderStandings(){
+
   const {stats,elo,streak}=computeStats();
+
   const el=document.getElementById("standings");
+
   const entries=Object.entries(stats);
-  if(!entries.length){el.innerHTML="No games yet.";return;}
-  entries.sort((a,b)=>b[1].w-a[1].w);
-  el.innerHTML=entries.map(([p,s],i)=>`
+
+  if(!entries.length){
+    el.innerHTML="No games yet.";
+    return;
+  }
+
+  entries.sort((a,b)=>elo[b[0]]-elo[a[0]]);
+
+  el.innerHTML=entries.map(([p,s],i)=>{
+
+    const gamesPlayed=s.w+s.l;
+    const winpct=gamesPlayed?((s.w/gamesPlayed)*100).toFixed(1):"0";
+
+    return`
     <div class="standings-item ${i===0?'leader':''}">
       <b>${p}</b> ${s.w}-${s.l}
       <span class="pill">ELO ${Math.round(elo[p])}</span>
+      <span class="pill">${winpct}%</span>
       <span class="muted">Streak ${streak[p]}</span>
     </div>
-  `).join("");
+    `;
+
+  }).join("");
+
 }
 
 function renderHistory(){
+
   const el=document.getElementById("recentGames");
-  document.getElementById("historySummary").textContent="Recent games ("+games.length+")";
+
+  document.getElementById("historySummary").textContent=
+  "Recent games ("+games.length+")";
 
   el.innerHTML=games.map(g=>`
     <div class="game">
@@ -271,41 +305,75 @@ function renderHistory(){
       <div>
         <div class="time">${fmtDate(g.date)}</div>
         <div class="main">${g.winner} beat ${g.winner===g.player1?g.player2:g.player1}</div>
-        <div class="meta">${g.end_condition||""}</div>
+        <div class="meta">
+        ${g.p1_group?g.p1_group+" / ":""}${g.end_condition||""}
+        </div>
       </div>
     </div>
   `).join("");
+
 }
 
 function renderAll(){
+
   renderStandings();
   renderHistory();
+
   const p1=document.getElementById("player1");
   const p2=document.getElementById("player2");
+
   p1.innerHTML=players.map(p=>`<option>${p}</option>`).join("");
   p2.innerHTML=players.map(p=>`<option>${p}</option>`).join("");
+
   updateWinButtons();
+
 }
 
 async function addPlayer(){
+
   const name=document.getElementById("newPlayer").value.trim();
+
   if(!name)return setStatus("Enter player name","error");
 
   await sb.from("players").insert({name});
+
   document.getElementById("newPlayer").value="";
+
   setStatus("Player added");
+
   loadData();
+
+}
+
+function quickRematch(){
+
+  const p1=document.getElementById("player1").value;
+  const p2=document.getElementById("player2").value;
+
+  if(!p1||!p2)return setStatus("Select players first","error");
+
+  document.getElementById("player1").value=p2;
+  document.getElementById("player2").value=p1;
+
+  updateWinButtons();
+
+  setStatus("Players swapped for rematch");
+
 }
 
 async function logWin(which){
+
   const p1=document.getElementById("player1").value;
   const p2=document.getElementById("player2").value;
+
   if(!p1||!p2||p1===p2)return setStatus("Select 2 players","error");
 
   const last=games[0];
+
   if(last){
     const diff=(Date.now()-new Date(last.date))/1000;
-    if(diff<DUP_GUARD_SECONDS)return setStatus("Duplicate prevented","error");
+    if(diff<DUP_GUARD_SECONDS)
+    return setStatus("Duplicate prevented","error");
   }
 
   const grouping=document.getElementById("grouping").value;
@@ -322,55 +390,89 @@ async function logWin(which){
   });
 
   setStatus("Game logged");
+
   loadData();
+
 }
 
 async function deleteLast(){
+
   if(!games.length)return;
+
   lastDeleted=games[0];
+
   await sb.from("games").delete().eq("id",lastDeleted.id);
+
   setStatus("Deleted last game");
+
   loadData();
+
 }
 
 async function undo(){
+
   if(!lastDeleted)return;
+
   await sb.from("games").insert(lastDeleted);
+
   lastDeleted=null;
+
   setStatus("Undo successful");
+
   loadData();
+
 }
 
 async function deleteSelected(){
+
   const checks=document.querySelectorAll(".deleteCheck:checked");
-  if(!checks.length)return setStatus("No games selected","error");
+
+  if(!checks.length)
+  return setStatus("No games selected","error");
+
   const ids=[...checks].map(c=>c.value);
+
   await sb.from("games").delete().in("id",ids);
+
   setStatus(ids.length+" game(s) deleted");
+
   loadData();
+
 }
 
 function exportCSV(){
+
   if(!games.length)return;
+
   const headers=["player1","player2","winner","date"];
+
   let csv=headers.join(",")+"\n";
+
   games.slice().reverse().forEach(g=>{
     csv+=headers.map(h=>g[h]).join(",")+"\n";
   });
+
   const blob=new Blob([csv],{type:"text/csv"});
   const url=URL.createObjectURL(blob);
+
   const a=document.createElement("a");
-  a.href=url;a.download="pool_log.csv";a.click();
+  a.href=url;
+  a.download="pool_log.csv";
+  a.click();
+
   URL.revokeObjectURL(url);
+
 }
 
 document.getElementById("p1WinBtn").onclick=()=>logWin(1);
 document.getElementById("p2WinBtn").onclick=()=>logWin(2);
+document.getElementById("rematchBtn").onclick=quickRematch;
+document.getElementById("addPlayerBtn").onclick=addPlayer;
+
 document.getElementById("deleteLastBtn").onclick=deleteLast;
 document.getElementById("undoBtn").onclick=undo;
 document.getElementById("deleteSelectedBtn").onclick=deleteSelected;
 document.getElementById("csvBtn").onclick=exportCSV;
-document.getElementById("addPlayerBtn").onclick=addPlayer;
 
 document.getElementById("player1").onchange=updateWinButtons;
 document.getElementById("player2").onchange=updateWinButtons;
