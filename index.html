@@ -6,127 +6,129 @@
 <title>House Pool Log</title>
 
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 
 <style>
 :root{
-  --bg:#f6f7fb;
-  --card:#ffffff;
-  --muted:#6b7280;
-  --text:#111827;
-  --line:#e5e7eb;
-  --good:#0a7d2c;
-  --bad:#b00020;
-  --shadow:0 2px 10px rgba(0,0,0,0.06);
-  --radius:12px;
+--bg:#f6f7fb;
+--card:#ffffff;
+--muted:#6b7280;
+--text:#111827;
+--line:#e5e7eb;
+--good:#0a7d2c;
+--bad:#b00020;
+--shadow:0 2px 10px rgba(0,0,0,0.06);
+--radius:12px;
 }
+
 body{
-  font-family: system-ui, sans-serif;
-  padding:16px;
-  max-width:900px;
-  margin:auto;
-  background:var(--bg);
-  color:var(--text);
+font-family:system-ui,sans-serif;
+padding:16px;
+max-width:900px;
+margin:auto;
+background:var(--bg);
+color:var(--text);
 }
-h1{margin:4px 0 2px;}
-h2{margin:0 0 10px;font-size:18px;}
+
 .grid{display:grid;grid-template-columns:1fr;gap:14px;}
 @media(min-width:860px){.grid{grid-template-columns:1fr 1fr;}}
 
 .card{
-  background:var(--card);
-  border-radius:var(--radius);
-  box-shadow:var(--shadow);
-  padding:14px;
+background:var(--card);
+border-radius:var(--radius);
+box-shadow:var(--shadow);
+padding:14px;
 }
 
 button{
-  padding:10px 12px;
-  border:1px solid var(--line);
-  border-radius:10px;
-  background:#fff;
-  cursor:pointer;
-  font-weight:600;
+padding:10px 12px;
+border:1px solid var(--line);
+border-radius:10px;
+background:#fff;
+cursor:pointer;
+font-weight:600;
 }
-button:disabled{opacity:.5;}
-
-select,input{
-  width:100%;
-  padding:10px 12px;
-  border:1px solid var(--line);
-  border-radius:10px;
-  background:#fff;
-}
-
-.status{font-weight:700;margin:12px 0;}
-.success{color:var(--good);}
-.error{color:var(--bad);}
 
 .row{display:flex;gap:10px;flex-wrap:wrap;}
 .row>*{flex:1 1 160px;}
+
 .btnrow{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;}
 .btnrow>button{flex:1 1 160px;}
 
 .pill{
-  display:inline-block;
-  font-size:12px;
-  padding:3px 8px;
-  border-radius:999px;
-  background:#eef2ff;
-  color:#3730a3;
-  border:1px solid #e0e7ff;
-  margin-left:8px;
+display:inline-block;
+font-size:12px;
+padding:3px 8px;
+border-radius:999px;
+background:#eef2ff;
+color:#3730a3;
+border:1px solid #e0e7ff;
+margin-left:6px;
 }
 
 .standings-item{
-  padding:10px;
-  border:1px solid var(--line);
-  border-radius:10px;
-  margin-bottom:8px;
+padding:10px;
+border:1px solid var(--line);
+border-radius:10px;
+margin-bottom:8px;
 }
-.leader{background:#ecfdf3;border-color:#b7f7cd;}
+
+.leader{
+background:#ecfdf3;
+border-color:#b7f7cd;
+}
 
 .muted{color:var(--muted);font-size:12px;}
 
 details summary{
-  cursor:pointer;
-  font-weight:800;
-  padding:10px;
-  border:1px solid var(--line);
-  border-radius:10px;
-  background:#fff;
-  list-style:none;
+cursor:pointer;
+font-weight:800;
+padding:10px;
+border:1px solid var(--line);
+border-radius:10px;
+background:#fff;
 }
-details summary::-webkit-details-marker{display:none;}
-details .content{margin-top:10px;}
 
 .game{
-  padding:10px 0;
-  border-bottom:1px solid var(--line);
-  display:flex;
-  gap:10px;
-  align-items:flex-start;
+padding:10px 0;
+border-bottom:1px solid var(--line);
+display:flex;
+gap:10px;
 }
-.game:last-child{border-bottom:none;}
+
 .time{font-size:12px;color:var(--muted);}
 .main{font-weight:800;margin-top:2px;}
 .meta{font-size:12px;margin-top:2px;color:#374151;}
+
+.statbox{
+margin-top:10px;
+padding:10px;
+border:1px solid var(--line);
+border-radius:10px;
+background:#fafafa;
+font-size:14px;
+}
 </style>
 </head>
 
 <body>
-<h1>🎱 House Pool Log <span class="pill" id="badge">v2.9.0</span></h1>
 
-<div id="status" class="status"></div>
+<h1>🎱 House Pool Log <span class="pill" id="badge">v3.0.0</span></h1>
 
 <div class="grid">
 
 <div class="card">
 <h2>🏆 Standings</h2>
 <div id="standings"></div>
+
+<div class="statbox">
+<b>👑 King of the Table</b>
+<div id="king"></div>
+</div>
+
 </div>
 
 <div class="card">
+
 <h2>📝 Log Game</h2>
 
 <div class="row">
@@ -134,21 +136,7 @@ details .content{margin-top:10px;}
 <select id="player2"></select>
 </div>
 
-<div class="row">
-<select id="grouping">
-<option value="">Group (Optional)</option>
-<option value="Solids">Solids</option>
-<option value="Stripes">Stripes</option>
-</select>
-
-<select id="endCondition">
-<option value="">End Condition</option>
-<option>Clean win</option>
-<option>Opponent scratched on 8</option>
-<option>Opponent sank 8 early</option>
-<option>Opponent missed 8</option>
-</select>
-</div>
+<div class="statbox" id="h2h"></div>
 
 <div class="btnrow">
 <button id="p1WinBtn">Player 1 Won</button>
@@ -175,313 +163,300 @@ details .content{margin-top:10px;}
 <div class="card">
 <h2>🕙 History</h2>
 <details>
-<summary id="historySummary">Recent games</summary>
-<div class="content" id="recentGames"></div>
-<div style="margin-top:10px;">
+<summary id="historySummary"></summary>
+<div id="recentGames"></div>
 <button id="deleteSelectedBtn">Delete Selected</button>
-</div>
 </details>
 </div>
 
 </div>
 
 <script>
-(() => {
 
-const VERSION="2.9.0";
-const SUPABASE_URL="https://wybycecwkvrukcfoqgpa.supabase.co";
-const SUPABASE_KEY="sb_publishable_nNpJJg1ZBcQSjbX1HhPeKg_5KeR8ngb";
-const K=20;
-const DUP_GUARD_SECONDS=10;
+const VERSION="3.0.0"
 
-const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const SUPABASE_URL="https://wybycecwkvrukcfoqgpa.supabase.co"
+const SUPABASE_KEY="sb_publishable_nNpJJg1ZBcQSjbX1HhPeKg_5KeR8ngb"
 
-let players=[];
-let games=[];
-let lastDeleted=null;
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY)
 
-function setStatus(msg,type="success"){
-  const el=document.getElementById("status");
-  el.className="status "+(type==="error"?"error":"success");
-  el.textContent=msg;
-  setTimeout(()=>el.textContent="",3000);
-}
+const K=20
 
-function fmtDate(ts){
-  return new Date(ts).toLocaleString();
-}
+let players=[]
+let games=[]
+let lastDeleted=null
 
-function updateWinButtons(){
-  const p1=document.getElementById("player1").value||"Player 1";
-  const p2=document.getElementById("player2").value||"Player 2";
-  document.getElementById("p1WinBtn").textContent=p1+" Won";
-  document.getElementById("p2WinBtn").textContent=p2+" Won";
-}
+function fmtDate(ts){return new Date(ts).toLocaleString()}
 
 async function loadData(){
 
-  const {data:p}=await sb.from("players").select("name").order("name");
-  players=p?.map(x=>x.name)||[];
+const {data:p}=await sb.from("players").select("name").order("name")
+players=p.map(x=>x.name)
 
-  const {data:g}=await sb.from("games").select("*").order("date",{ascending:false});
-  games=g||[];
+const {data:g}=await sb.from("games").select("*").order("date",{ascending:false})
+games=g
 
-  renderAll();
+renderAll()
+
 }
 
 function computeStats(){
-  const stats={},elo={},streak={};
 
-  games.slice().reverse().forEach(g=>{
+const stats={},elo={},streak={}
+let king=null
+let kingStreak=0
+let longest={player:null,streak:0}
 
-    [g.player1,g.player2].forEach(p=>{
-      if(!stats[p])stats[p]={w:0,l:0};
-      if(!elo[p])elo[p]=1000;
-      if(streak[p]===undefined)streak[p]=0;
-    });
+games.slice().reverse().forEach(g=>{
 
-    const winner=g.winner;
-    const loser=winner===g.player1?g.player2:g.player1;
+[g.player1,g.player2].forEach(p=>{
+if(!stats[p])stats[p]={w:0,l:0}
+if(!elo[p])elo[p]=1000
+if(streak[p]===undefined)streak[p]=0
+})
 
-    stats[winner].w++;
-    stats[loser].l++;
+const winner=g.winner
+const loser=winner===g.player1?g.player2:g.player1
 
-    streak[winner]++;
-    streak[loser]=0;
+stats[winner].w++
+stats[loser].l++
 
-    const exp=1/(1+Math.pow(10,(elo[loser]-elo[winner])/400));
+if(king===winner) kingStreak++
+else{
+king=winner
+kingStreak=1
+}
 
-    elo[winner]+=K*(1-exp);
-    elo[loser]+=K*(0-(1-exp));
+if(kingStreak>longest.streak){
+longest={player:winner,streak:kingStreak}
+}
 
-  });
+streak[winner]++
+streak[loser]=0
 
-  return{stats,elo,streak};
+const exp=1/(1+Math.pow(10,(elo[loser]-elo[winner])/400))
+
+elo[winner]+=K*(1-exp)
+elo[loser]+=K*(0-(1-exp))
+
+})
+
+return{stats,elo,streak,king,longest}
+
 }
 
 function renderStandings(){
 
-  const {stats,elo,streak}=computeStats();
+const {stats,elo,streak,king,longest}=computeStats()
 
-  const el=document.getElementById("standings");
+const entries=Object.entries(stats)
 
-  const entries=Object.entries(stats);
+entries.sort((a,b)=>elo[b[0]]-elo[a[0]])
 
-  if(!entries.length){
-    el.innerHTML="No games yet.";
-    return;
-  }
+document.getElementById("standings").innerHTML=entries.map(([p,s],i)=>{
 
-  entries.sort((a,b)=>elo[b[0]]-elo[a[0]]);
+const gamesPlayed=s.w+s.l
+const pct=gamesPlayed?((s.w/gamesPlayed)*100).toFixed(1):0
 
-  el.innerHTML=entries.map(([p,s],i)=>{
+return`
+<div class="standings-item ${i===0?'leader':''}">
+<b>${p}</b> ${s.w}-${s.l}
+<span class="pill">ELO ${Math.round(elo[p])}</span>
+<span class="pill">${pct}%</span>
+<span class="muted">Streak ${streak[p]}</span>
+</div>`
 
-    const gamesPlayed=s.w+s.l;
-    const winpct=gamesPlayed?((s.w/gamesPlayed)*100).toFixed(1):"0";
+}).join("")
 
-    return`
-    <div class="standings-item ${i===0?'leader':''}">
-      <b>${p}</b> ${s.w}-${s.l}
-      <span class="pill">ELO ${Math.round(elo[p])}</span>
-      <span class="pill">${winpct}%</span>
-      <span class="muted">Streak ${streak[p]}</span>
-    </div>
-    `;
-
-  }).join("");
+document.getElementById("king").innerHTML=
+king?`${king} currently holds the table.<br>
+Longest streak: ${longest.player} (${longest.streak})`
+:"No games yet."
 
 }
 
 function renderHistory(){
 
-  const el=document.getElementById("recentGames");
+document.getElementById("historySummary").textContent=
+`Recent games (${games.length})`
 
-  document.getElementById("historySummary").textContent=
-  "Recent games ("+games.length+")";
+document.getElementById("recentGames").innerHTML=
+games.map(g=>`
 
-  el.innerHTML=games.map(g=>`
-    <div class="game">
-      <input type="checkbox" class="deleteCheck" value="${g.id}">
-      <div>
-        <div class="time">${fmtDate(g.date)}</div>
-        <div class="main">${g.winner} beat ${g.winner===g.player1?g.player2:g.player1}</div>
-        <div class="meta">
-        ${g.p1_group?g.p1_group+" / ":""}${g.end_condition||""}
-        </div>
-      </div>
-    </div>
-  `).join("");
+<div class="game">
+<input type="checkbox" class="deleteCheck" value="${g.id}">
+<div>
+<div class="time">${fmtDate(g.date)}</div>
+<div class="main">${g.winner} beat ${g.winner===g.player1?g.player2:g.player1}</div>
+</div>
+</div>
+
+`).join("")
 
 }
 
-function renderAll(){
+function renderPlayers(){
 
-  renderStandings();
-  renderHistory();
+const p1=document.getElementById("player1")
+const p2=document.getElementById("player2")
 
-  const p1=document.getElementById("player1");
-  const p2=document.getElementById("player2");
+p1.innerHTML=players.map(p=>`<option>${p}</option>`).join("")
+p2.innerHTML=players.map(p=>`<option>${p}</option>`).join("")
 
-  p1.innerHTML=players.map(p=>`<option>${p}</option>`).join("");
-  p2.innerHTML=players.map(p=>`<option>${p}</option>`).join("");
-
-  updateWinButtons();
+updateButtons()
 
 }
 
-async function addPlayer(){
+function updateButtons(){
 
-  const name=document.getElementById("newPlayer").value.trim();
+const p1=document.getElementById("player1").value||"Player 1"
+const p2=document.getElementById("player2").value||"Player 2"
 
-  if(!name)return setStatus("Enter player name","error");
+document.getElementById("p1WinBtn").textContent=`${p1} Won`
+document.getElementById("p2WinBtn").textContent=`${p2} Won`
 
-  await sb.from("players").insert({name});
-
-  document.getElementById("newPlayer").value="";
-
-  setStatus("Player added");
-
-  loadData();
+updateH2H()
 
 }
 
-function quickRematch(){
+function updateH2H(){
 
-  const p1=document.getElementById("player1").value;
-  const p2=document.getElementById("player2").value;
+const p1=document.getElementById("player1").value
+const p2=document.getElementById("player2").value
 
-  if(!p1||!p2)return setStatus("Select players first","error");
+if(!p1||!p2||p1===p2)return
 
-  document.getElementById("player1").value=p2;
-  document.getElementById("player2").value=p1;
+let a=0,b=0
 
-  updateWinButtons();
+games.forEach(g=>{
+if((g.player1===p1&&g.player2===p2)||(g.player1===p2&&g.player2===p1)){
+if(g.winner===p1)a++
+else b++
+}
+})
 
-  setStatus("Players swapped for rematch");
+let leader=a>b?p1:p2
+
+document.getElementById("h2h").innerHTML=
+`<b>${p1} vs ${p2}</b><br>${leader} leads ${a}-${b}`
 
 }
 
 async function logWin(which){
 
-  const p1=document.getElementById("player1").value;
-  const p2=document.getElementById("player2").value;
+const p1=document.getElementById("player1").value
+const p2=document.getElementById("player2").value
 
-  if(!p1||!p2||p1===p2)return setStatus("Select 2 players","error");
+await sb.from("games").insert({
+player1:p1,
+player2:p2,
+winner:which===1?p1:p2,
+date:new Date().toISOString()
+})
 
-  const last=games[0];
+loadData()
 
-  if(last){
-    const diff=(Date.now()-new Date(last.date))/1000;
-    if(diff<DUP_GUARD_SECONDS)
-    return setStatus("Duplicate prevented","error");
-  }
+}
 
-  const grouping=document.getElementById("grouping").value;
-  const end=document.getElementById("endCondition").value;
+function quickRematch(){
 
-  await sb.from("games").insert({
-    player1:p1,
-    player2:p2,
-    winner:which===1?p1:p2,
-    p1_group:grouping||null,
-    p2_group:null,
-    end_condition:end||null,
-    date:new Date().toISOString()
-  });
+const p1=document.getElementById("player1").value
+const p2=document.getElementById("player2").value
 
-  setStatus("Game logged");
+document.getElementById("player1").value=p2
+document.getElementById("player2").value=p1
 
-  loadData();
+updateButtons()
+
+}
+
+async function addPlayer(){
+
+const name=document.getElementById("newPlayer").value.trim()
+
+await sb.from("players").insert({name})
+
+document.getElementById("newPlayer").value=""
+
+loadData()
 
 }
 
 async function deleteLast(){
 
-  if(!games.length)return;
+lastDeleted=games[0]
 
-  lastDeleted=games[0];
+await sb.from("games").delete().eq("id",lastDeleted.id)
 
-  await sb.from("games").delete().eq("id",lastDeleted.id);
-
-  setStatus("Deleted last game");
-
-  loadData();
+loadData()
 
 }
 
 async function undo(){
 
-  if(!lastDeleted)return;
+if(!lastDeleted)return
 
-  await sb.from("games").insert(lastDeleted);
+await sb.from("games").insert(lastDeleted)
 
-  lastDeleted=null;
+lastDeleted=null
 
-  setStatus("Undo successful");
-
-  loadData();
+loadData()
 
 }
 
 async function deleteSelected(){
 
-  const checks=document.querySelectorAll(".deleteCheck:checked");
+const ids=[...document.querySelectorAll(".deleteCheck:checked")].map(x=>x.value)
 
-  if(!checks.length)
-  return setStatus("No games selected","error");
+await sb.from("games").delete().in("id",ids)
 
-  const ids=[...checks].map(c=>c.value);
-
-  await sb.from("games").delete().in("id",ids);
-
-  setStatus(ids.length+" game(s) deleted");
-
-  loadData();
+loadData()
 
 }
 
 function exportCSV(){
 
-  if(!games.length)return;
+let csv="player1,player2,winner,date\n"
 
-  const headers=["player1","player2","winner","date"];
+games.slice().reverse().forEach(g=>{
+csv+=`${g.player1},${g.player2},${g.winner},${g.date}\n`
+})
 
-  let csv=headers.join(",")+"\n";
+const blob=new Blob([csv],{type:"text/csv"})
+const url=URL.createObjectURL(blob)
 
-  games.slice().reverse().forEach(g=>{
-    csv+=headers.map(h=>g[h]).join(",")+"\n";
-  });
+const a=document.createElement("a")
+a.href=url
+a.download="pool_log.csv"
+a.click()
 
-  const blob=new Blob([csv],{type:"text/csv"});
-  const url=URL.createObjectURL(blob);
-
-  const a=document.createElement("a");
-  a.href=url;
-  a.download="pool_log.csv";
-  a.click();
-
-  URL.revokeObjectURL(url);
+URL.revokeObjectURL(url)
 
 }
 
-document.getElementById("p1WinBtn").onclick=()=>logWin(1);
-document.getElementById("p2WinBtn").onclick=()=>logWin(2);
-document.getElementById("rematchBtn").onclick=quickRematch;
-document.getElementById("addPlayerBtn").onclick=addPlayer;
+document.getElementById("p1WinBtn").onclick=()=>logWin(1)
+document.getElementById("p2WinBtn").onclick=()=>logWin(2)
+document.getElementById("rematchBtn").onclick=quickRematch
+document.getElementById("addPlayerBtn").onclick=addPlayer
+document.getElementById("deleteLastBtn").onclick=deleteLast
+document.getElementById("undoBtn").onclick=undo
+document.getElementById("deleteSelectedBtn").onclick=deleteSelected
+document.getElementById("csvBtn").onclick=exportCSV
 
-document.getElementById("deleteLastBtn").onclick=deleteLast;
-document.getElementById("undoBtn").onclick=undo;
-document.getElementById("deleteSelectedBtn").onclick=deleteSelected;
-document.getElementById("csvBtn").onclick=exportCSV;
+document.getElementById("player1").onchange=updateButtons
+document.getElementById("player2").onchange=updateButtons
 
-document.getElementById("player1").onchange=updateWinButtons;
-document.getElementById("player2").onchange=updateWinButtons;
+document.getElementById("badge").textContent="v"+VERSION
 
-document.getElementById("badge").textContent="v"+VERSION;
+function renderAll(){
+renderStandings()
+renderHistory()
+renderPlayers()
+}
 
-loadData();
+loadData()
 
-})();
 </script>
+
 </body>
 </html>
