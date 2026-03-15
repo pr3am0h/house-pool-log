@@ -116,7 +116,7 @@ details .content{margin-top:10px;}
 </head>
 
 <body>
-<h1>🎱 House Pool Log <span class="pill" id="badge">v2.7.0</span></h1>
+<h1>🎱 House Pool Log <span class="pill" id="badge">v2.8.0</span></h1>
 
 <div id="status" class="status"></div>
 
@@ -129,6 +129,7 @@ details .content{margin-top:10px;}
 
 <div class="card">
 <h2>📝 Log Game</h2>
+
 <div class="row">
 <select id="player1"></select>
 <select id="player2"></select>
@@ -155,6 +156,11 @@ details .content{margin-top:10px;}
 <button id="p2WinBtn">Player 2 Won</button>
 </div>
 
+<div class="row">
+<input id="newPlayer" placeholder="Add new player">
+<button id="addPlayerBtn">Add Player</button>
+</div>
+
 <div class="btnrow">
 <button id="deleteLastBtn">Delete last game</button>
 <button id="undoBtn">Undo</button>
@@ -165,8 +171,8 @@ details .content{margin-top:10px;}
 
 <div class="card">
 <h2>🕙 History</h2>
-<details open>
-<summary>Recent games</summary>
+<details>
+<summary id="historySummary">Recent games</summary>
 <div class="content" id="recentGames"></div>
 <div style="margin-top:10px;">
 <button id="deleteSelectedBtn">Delete Selected</button>
@@ -179,7 +185,7 @@ details .content{margin-top:10px;}
 <script>
 (() => {
 
-const VERSION="2.7.0";
+const VERSION="2.8.0";
 const SUPABASE_URL="https://wybycecwkvrukcfoqgpa.supabase.co";
 const SUPABASE_KEY="sb_publishable_nNpJJg1ZBcQSjbX1HhPeKg_5KeR8ngb";
 const K=20;
@@ -200,6 +206,13 @@ function setStatus(msg,type="success"){
 
 function fmtDate(ts){
   return new Date(ts).toLocaleString();
+}
+
+function updateWinButtons(){
+  const p1=document.getElementById("player1").value||"Player 1";
+  const p2=document.getElementById("player2").value||"Player 2";
+  document.getElementById("p1WinBtn").textContent=p1+" Won";
+  document.getElementById("p2WinBtn").textContent=p2+" Won";
 }
 
 async function loadData(){
@@ -250,6 +263,8 @@ function renderStandings(){
 
 function renderHistory(){
   const el=document.getElementById("recentGames");
+  document.getElementById("historySummary").textContent="Recent games ("+games.length+")";
+
   el.innerHTML=games.map(g=>`
     <div class="game">
       <input type="checkbox" class="deleteCheck" value="${g.id}">
@@ -269,6 +284,17 @@ function renderAll(){
   const p2=document.getElementById("player2");
   p1.innerHTML=players.map(p=>`<option>${p}</option>`).join("");
   p2.innerHTML=players.map(p=>`<option>${p}</option>`).join("");
+  updateWinButtons();
+}
+
+async function addPlayer(){
+  const name=document.getElementById("newPlayer").value.trim();
+  if(!name)return setStatus("Enter player name","error");
+
+  await sb.from("players").insert({name});
+  document.getElementById("newPlayer").value="";
+  setStatus("Player added");
+  loadData();
 }
 
 async function logWin(which){
@@ -344,6 +370,10 @@ document.getElementById("deleteLastBtn").onclick=deleteLast;
 document.getElementById("undoBtn").onclick=undo;
 document.getElementById("deleteSelectedBtn").onclick=deleteSelected;
 document.getElementById("csvBtn").onclick=exportCSV;
+document.getElementById("addPlayerBtn").onclick=addPlayer;
+
+document.getElementById("player1").onchange=updateWinButtons;
+document.getElementById("player2").onchange=updateWinButtons;
 
 document.getElementById("badge").textContent="v"+VERSION;
 
