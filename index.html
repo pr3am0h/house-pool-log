@@ -35,8 +35,6 @@ margin:auto;
 color:var(--text);
 }
 
-h1{margin-bottom:16px}
-
 .layout{
 display:grid;
 grid-template-columns:2fr 1fr;
@@ -47,11 +45,7 @@ gap:16px;
 .layout{grid-template-columns:1fr}
 }
 
-.grid{
-display:grid;
-grid-template-columns:1fr;
-gap:14px;
-}
+.grid{display:grid;gap:14px;}
 
 .card{
 background:var(--card);
@@ -69,12 +63,10 @@ cursor:pointer;
 background:var(--accent);
 color:white;
 font-weight:600;
-transition:all 0.2s ease;
 }
 
 button:hover{
 background:var(--accent-hover);
-transform:translateY(-1px);
 }
 
 .row{display:flex;gap:10px;flex-wrap:wrap}
@@ -97,28 +89,18 @@ background:rgba(111,45,189,0.2);
 margin-left:6px;
 }
 
-.game{
-padding:8px 0;
-border-bottom:1px solid var(--line);
-}
-
-.muted{font-size:12px;color:var(--muted)}
-
 .history{
 max-height:280px;
 overflow-y:auto;
 }
 
-/* Standings Table */
 .standings-table{
 width:100%;
 border-collapse:collapse;
-font-size:14px;
 }
 
 .standings-table th,
 .standings-table td{
-text-align:left;
 padding:8px 6px;
 }
 
@@ -126,9 +108,14 @@ padding:8px 6px;
 border-bottom:1px solid var(--line);
 }
 
-.standings-table tr:first-child{
+.player-click{cursor:pointer;color:#c4b5fd}
+
+.king{
+text-align:center;
+padding:12px;
 background:rgba(111,45,189,0.15);
-font-weight:bold;
+border-radius:10px;
+margin-bottom:10px;
 }
 
 </style>
@@ -136,20 +123,26 @@ font-weight:bold;
 
 <body>
 
-<h1>🎱 House Pool Log <span class="pill" id="badge"></span></h1>
+<h1>🎱 House Pool Log <span id="badge"></span></h1>
 
 <div class="layout">
 
-<!-- LEFT SIDE -->
 <div class="grid">
 
 <div class="card">
-
 <h2>📝 Log Game</h2>
 
 <div class="row">
 <select id="player1"></select>
 <select id="player2"></select>
+</div>
+
+<div class="row">
+<select id="gameType">
+<option>8 Ball</option>
+<option>9 Ball</option>
+<option>Other</option>
+</select>
 </div>
 
 <div class="btnrow">
@@ -160,11 +153,9 @@ font-weight:bold;
 <div class="btnrow">
 <button id="rematchBtn">🔁 Rematch</button>
 </div>
-
 </div>
 
 <div class="card">
-
 <h2>👥 Players</h2>
 
 <div class="row">
@@ -173,29 +164,49 @@ font-weight:bold;
 </div>
 
 <div id="playerList"></div>
-
 </div>
 
 <div class="card">
+<details>
+<summary>📜 Rules</summary>
 
-<details open>
-<summary>🕙 Game History</summary>
+<p><b>House Rules (8 Ball)</b></p>
+<ul>
+<li>Call pocket on 8</li>
+<li>Scratch on 8 = loss</li>
+<li>No slop shots</li>
+</ul>
 
-<div id="history" class="history"></div>
-
-<button id="deleteLastBtn">Undo Last Game</button>
+<p><b>APA Notes</b></p>
+<ul>
+<li>Ball-in-hand on scratch</li>
+<li>8 must be called</li>
+</ul>
 
 </details>
-
 </div>
 
-</div>
-
-<!-- RIGHT SIDE -->
 <div class="card">
+<details open>
+<summary>🕙 Game History</summary>
+<div id="history" class="history"></div>
+<button id="deleteLastBtn">Undo Last Game</button>
+</details>
+</div>
 
+</div>
+
+<div class="grid">
+
+<div class="card">
+<h2>👑 King of the Table</h2>
+<div id="king"></div>
+</div>
+
+<div class="card">
 <h2>🏆 Standings</h2>
 <div id="standings"></div>
+</div>
 
 </div>
 
@@ -203,7 +214,7 @@ font-weight:bold;
 
 <script>
 
-const VERSION="3.3.0"
+const VERSION="3.5.0"
 
 const SUPABASE_URL="https://wybycecwkvrukcfoqgpa.supabase.co"
 const SUPABASE_KEY="sb_publishable_nNpJJg1ZBcQSjbX1HhPeKg_5KeR8ngb"
@@ -229,160 +240,17 @@ renderAll()
 
 }
 
-function renderPlayers(){
-
-const p1=document.getElementById("player1")
-const p2=document.getElementById("player2")
-
-p1.innerHTML=players.map(p=>`<option>${p}</option>`).join("")
-p2.innerHTML=players.map(p=>`<option>${p}</option>`).join("")
-
-p1.onchange=updateButtons
-p2.onchange=updateButtons
-
-updateButtons()
-
-const list=document.getElementById("playerList")
-
-list.innerHTML=players.map(p=>`
-
-<div class="player-row">
-
-<div>${p}</div>
-
-<div>
-<button onclick="editPlayer('${p}')">Edit</button>
-<button onclick="deletePlayer('${p}')">Delete</button>
-</div>
-
-</div>
-
-`).join("")
-
-}
-
-async function addPlayer(){
-
-let name=document.getElementById("newPlayer").value.trim()
-
-if(!name){
-alert("Enter a player name.")
-return
-}
-
-if(players.includes(name)){
-alert("Player already exists.")
-return
-}
-
-await sb.from("players").insert({name})
-
-document.getElementById("newPlayer").value=""
-
-loadData()
-
-}
-
-async function editPlayer(oldName){
-
-let newName=prompt("Edit player name",oldName)
-
-if(!newName)return
-
-newName=newName.trim()
-
-await sb.from("players").update({name:newName}).eq("name",oldName)
-
-await sb.from("games").update({player1:newName}).eq("player1",oldName)
-await sb.from("games").update({player2:newName}).eq("player2",oldName)
-await sb.from("games").update({winner:newName}).eq("winner",oldName)
-
-loadData()
-
-}
-
-async function deletePlayer(name){
-
-let used=games.some(g=>g.player1===name||g.player2===name)
-
-if(used){
-alert("Cannot delete player with logged games.")
-return
-}
-
-if(!confirm("Delete "+name+" ?"))return
-
-await sb.from("players").delete().eq("name",name)
-
-loadData()
-
-}
-
-function updateButtons(){
-
-const p1=document.getElementById("player1").value||"Player 1"
-const p2=document.getElementById("player2").value||"Player 2"
-
-document.getElementById("p1WinBtn").textContent=p1+" Won"
-document.getElementById("p2WinBtn").textContent=p2+" Won"
-
-}
-
-async function logWin(which){
-
-const p1=document.getElementById("player1").value
-const p2=document.getElementById("player2").value
-
-if(p1===p2){
-alert("Players must be different.")
-return
-}
-
-await sb.from("games").insert({
-player1:p1,
-player2:p2,
-winner:which===1?p1:p2,
-date:new Date().toISOString()
-})
-
-loadData()
-
-}
-
-function quickRematch(){
-
-const p1=document.getElementById("player1")
-const p2=document.getElementById("player2")
-
-let temp=p1.value
-p1.value=p2.value
-p2.value=temp
-
-updateButtons()
-
-}
-
-async function deleteLast(){
-
-if(!games.length)return
-
-if(!confirm("Delete last game?"))return
-
-await sb.from("games").delete().eq("id",games[0].id)
-
-loadData()
-
-}
-
 function computeStats(){
 
-const stats={},elo={}
+const stats={},elo={},streak={},maxStreak={}
 
 games.slice().reverse().forEach(g=>{
 
 [g.player1,g.player2].forEach(p=>{
 if(!stats[p])stats[p]={w:0,l:0}
 if(!elo[p])elo[p]=1000
+if(!streak[p])streak[p]=0
+if(!maxStreak[p])maxStreak[p]=0
 })
 
 const winner=g.winner
@@ -391,6 +259,11 @@ const loser=winner===g.player1?g.player2:g.player1
 stats[winner].w++
 stats[loser].l++
 
+streak[winner]++
+streak[loser]=0
+
+maxStreak[winner]=Math.max(maxStreak[winner],streak[winner])
+
 const exp=1/(1+Math.pow(10,(elo[loser]-elo[winner])/400))
 
 elo[winner]+=K*(1-exp)
@@ -398,17 +271,38 @@ elo[loser]+=K*(0-(1-exp))
 
 })
 
-return{stats,elo}
+return{stats,elo,streak,maxStreak}
+
+}
+
+function renderKing(){
+
+if(!games.length){
+document.getElementById("king").innerHTML="No games yet"
+return
+}
+
+const lastWinner=games[0].winner
+
+const {maxStreak}=computeStats()
+
+let bestPlayer=Object.entries(maxStreak).sort((a,b)=>b[1]-a[1])[0]
+
+document.getElementById("king").innerHTML=`
+<div class="king">
+👑 <b>${lastWinner}</b><br>
+Current King<br><br>
+🔥 Best Streak: ${bestPlayer[0]} (${bestPlayer[1]})
+</div>
+`
 
 }
 
 function renderStandings(){
 
-const {stats,elo}=computeStats()
+const {stats,elo,streak}=computeStats()
 
-const list=Object.entries(stats)
-
-list.sort((a,b)=>elo[b[0]]-elo[a[0]])
+const list=Object.entries(stats).sort((a,b)=>elo[b[0]]-elo[a[0]])
 
 document.getElementById("standings").innerHTML=`
 
@@ -425,11 +319,12 @@ ${list.map(([p,s],i)=>{
 
 const games=s.w+s.l
 const pct=((s.w/games)*100).toFixed(1)
+const st=streak[p]>1?` 🔥 ${streak[p]}`:""
 
 return`
 <tr>
 <td>${i+1}</td>
-<td><b>${p}</b></td>
+<td class="player-click" onclick="showHead('${p}')"><b>${p}</b>${st}</td>
 <td>${s.w}-${s.l}</td>
 <td>${Math.round(elo[p])}</td>
 <td>${pct}%</td>
@@ -443,30 +338,109 @@ return`
 
 }
 
+function showHead(p){
+
+let r={}
+
+games.forEach(g=>{
+if(g.player1===p||g.player2===p){
+let o=g.player1===p?g.player2:g.player1
+if(!r[o])r[o]={w:0,l:0}
+if(g.winner===p)r[o].w++
+else r[o].l++
+}
+})
+
+let txt=`${p} head-to-head:\n\n`
+Object.entries(r).forEach(([o,v])=>{
+txt+=`${p} vs ${o}: ${v.w}-${v.l}\n`
+})
+
+alert(txt)
+
+}
+
 function renderHistory(){
 
 document.getElementById("history").innerHTML=
-
 games.map(g=>`
-
-<div class="game">
-
+<div>
 <div class="muted">${new Date(g.date).toLocaleString()}</div>
-
 <b>${g.winner}</b> beat ${g.winner===g.player1?g.player2:g.player1}
-
 </div>
-
 `).join("")
 
 }
 
-function renderAll(){
+function renderPlayers(){
 
+const p1=document.getElementById("player1")
+const p2=document.getElementById("player2")
+
+p1.innerHTML=players.map(p=>`<option>${p}</option>`).join("")
+p2.innerHTML=players.map(p=>`<option>${p}</option>`).join("")
+
+updateButtons()
+
+document.getElementById("playerList").innerHTML=
+players.map(p=>`
+<div class="player-row">
+<div>${p}</div>
+<div>
+<button onclick="editPlayer('${p}')">Edit</button>
+<button onclick="deletePlayer('${p}')">Delete</button>
+</div>
+</div>`).join("")
+
+}
+
+function renderAll(){
 renderPlayers()
 renderStandings()
 renderHistory()
+renderKing()
+}
 
+function updateButtons(){
+const p1=document.getElementById("player1").value||"Player 1"
+const p2=document.getElementById("player2").value||"Player 2"
+document.getElementById("p1WinBtn").textContent=p1+" Won"
+document.getElementById("p2WinBtn").textContent=p2+" Won"
+}
+
+async function logWin(which){
+
+const p1=document.getElementById("player1").value
+const p2=document.getElementById("player2").value
+const gameType=document.getElementById("gameType").value
+
+if(p1===p2)return alert("Players must be different.")
+
+await sb.from("games").insert({
+player1:p1,
+player2:p2,
+winner:which===1?p1:p2,
+game_type:gameType,
+date:new Date().toISOString()
+})
+
+loadData()
+
+}
+
+async function deleteLast(){
+if(!games.length)return
+await sb.from("games").delete().eq("id",games[0].id)
+loadData()
+}
+
+function quickRematch(){
+let p1=document.getElementById("player1")
+let p2=document.getElementById("player2")
+let t=p1.value
+p1.value=p2.value
+p2.value=t
+updateButtons()
 }
 
 document.getElementById("p1WinBtn").onclick=()=>logWin(1)
@@ -474,6 +448,32 @@ document.getElementById("p2WinBtn").onclick=()=>logWin(2)
 document.getElementById("rematchBtn").onclick=quickRematch
 document.getElementById("addPlayerBtn").onclick=addPlayer
 document.getElementById("deleteLastBtn").onclick=deleteLast
+
+async function addPlayer(){
+let n=document.getElementById("newPlayer").value.trim()
+if(!n||players.includes(n))return
+await sb.from("players").insert({name:n})
+document.getElementById("newPlayer").value=""
+loadData()
+}
+
+async function editPlayer(oldName){
+let newName=prompt("Edit player name",oldName)
+if(!newName)return
+await sb.from("players").update({name:newName}).eq("name",oldName)
+await sb.from("games").update({player1:newName}).eq("player1",oldName)
+await sb.from("games").update({player2:newName}).eq("player2",oldName)
+await sb.from("games").update({winner:newName}).eq("winner",oldName)
+loadData()
+}
+
+async function deletePlayer(name){
+let used=games.some(g=>g.player1===name||g.player2===name)
+if(used)return alert("Cannot delete player with logged games.")
+if(!confirm("Delete "+name+" ?"))return
+await sb.from("players").delete().eq("name",name)
+loadData()
+}
 
 loadData()
 
