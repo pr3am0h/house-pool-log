@@ -33,6 +33,16 @@ margin:auto;
 color:var(--text);
 }
 
+/* Banner */
+.banner{
+margin-bottom:16px;
+padding:10px 14px;
+border-radius:10px;
+background:rgba(111,45,189,0.15);
+text-align:center;
+font-weight:600;
+}
+
 .layout{
 display:grid;
 grid-template-columns:2fr 1fr;
@@ -69,21 +79,6 @@ button:hover{background:var(--accent-hover)}
 .row>*{flex:1}
 
 .btnrow{display:flex;gap:10px;margin-top:10px}
-
-.player-row{
-display:flex;
-justify-content:space-between;
-padding:6px 0;
-border-bottom:1px solid var(--line);
-}
-
-.pill{
-font-size:12px;
-padding:3px 8px;
-border-radius:999px;
-background:rgba(111,45,189,0.2);
-margin-left:6px;
-}
 
 /* Tooltip */
 .tooltip{
@@ -157,6 +152,8 @@ border-radius:10px;
 
 <h1>🎱 House Pool Log <span id="badge"></span></h1>
 
+<div id="lastGameBanner"></div>
+
 <div class="layout">
 
 <div class="grid">
@@ -218,7 +215,6 @@ border-radius:10px;
 <li>ELO is a skill rating based on wins/losses.</li>
 <li>Beat stronger players → gain more points.</li>
 <li>Lose to weaker players → lose more points.</li>
-<li>Helps track long-term performance.</li>
 </ul>
 
 </details>
@@ -252,7 +248,7 @@ border-radius:10px;
 
 <script>
 
-const VERSION="3.8.0"
+const VERSION="3.9.0"
 
 const SUPABASE_URL="https://wybycecwkvrukcfoqgpa.supabase.co"
 const SUPABASE_KEY="sb_publishable_nNpJJg1ZBcQSjbX1HhPeKg_5KeR8ngb"
@@ -265,6 +261,32 @@ let players=[]
 let games=[]
 
 document.getElementById("badge").textContent="v"+VERSION
+
+function timeAgo(dateStr){
+const diff=(Date.now()-new Date(dateStr))/1000
+if(diff<60)return "just now"
+if(diff<3600)return Math.floor(diff/60)+" min ago"
+if(diff<86400)return Math.floor(diff/3600)+" hr ago"
+return Math.floor(diff/86400)+" day(s) ago"
+}
+
+function renderBanner(){
+
+if(!games.length){
+document.getElementById("lastGameBanner").innerHTML=""
+return
+}
+
+const g=games[0]
+const loser=g.winner===g.player1?g.player2:g.player1
+
+document.getElementById("lastGameBanner").innerHTML=`
+<div class="banner">
+${g.winner} beat ${loser} • ${timeAgo(g.date)}
+</div>
+`
+
+}
 
 async function loadData(){
 
@@ -427,6 +449,7 @@ renderPlayers()
 renderStandings()
 renderHistory()
 renderKing()
+renderBanner()
 updateButtons()
 }
 
