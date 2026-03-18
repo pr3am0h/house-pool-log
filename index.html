@@ -104,22 +104,44 @@ font-size:11px;
 white-space:nowrap;
 }
 
-.history{
-max-height:280px;
-overflow-y:auto;
-}
-
+/* Standings */
 .standings-table{
 width:100%;
 border-collapse:collapse;
 }
 
+.standings-table th,
 .standings-table td{
 padding:8px 6px;
+text-align:left;
+}
+
+.standings-table tr{
 border-bottom:1px solid var(--line);
 }
 
-.player-click{cursor:pointer;color:#c4b5fd}
+.standings-table tr:first-child{
+background:rgba(111,45,189,0.15);
+font-weight:bold;
+}
+
+/* History */
+.history{
+display:flex;
+flex-direction:column;
+gap:8px;
+max-height:300px;
+overflow-y:auto;
+}
+
+.history-item{
+padding:10px;
+border-radius:10px;
+background:#11131a;
+border:1px solid rgba(255,255,255,0.04);
+}
+
+.muted{font-size:12px;color:var(--muted)}
 
 .king{
 text-align:center;
@@ -153,7 +175,7 @@ border-radius:10px;
 </div>
 
 <div class="btnrow">
-<button id="rematchBtn">🔁 Rematch</button>
+<button id="rematchBtn" class="tooltip" data-tip="Swap players for next game">🔁 Rematch</button>
 </div>
 </div>
 
@@ -174,15 +196,15 @@ border-radius:10px;
 
 <h3>🧠 Core Concepts</h3>
 <ul>
-<li><b>Scratch:</b> Cue ball goes into a pocket or off table → opponent gets ball-in-hand.</li>
-<li><b>Ball-in-hand:</b> You can place the cue ball anywhere before shooting.</li>
-<li><b>Slop shot:</b> Ball goes in a pocket you DID NOT call → counts only if “slop allowed.”</li>
-<li><b>Call shot:</b> You must call ball + pocket before shooting.</li>
-<li><b>Legal shot:</b> Must hit your ball group first, or a rail after contact.</li>
-<li><b>Break:</b> First shot of game — spreads balls.</li>
+<li><b>Scratch:</b> Cue ball goes into a pocket → opponent gets ball-in-hand.</li>
+<li><b>Ball-in-hand:</b> Place cue ball anywhere before shooting.</li>
+<li><b>Slop shot:</b> Ball goes in unintended pocket.</li>
+<li><b>Call shot:</b> Must call ball + pocket.</li>
+<li><b>Legal shot:</b> Must hit correct ball first or rail after contact.</li>
+<li><b>Break:</b> First shot of the game.</li>
 </ul>
 
-<h3>🏠 House Rules (Simple)</h3>
+<h3>🏠 House Rules</h3>
 <ul>
 <li>Call all shots (no slop)</li>
 <li>Scratch = ball-in-hand</li>
@@ -191,20 +213,12 @@ border-radius:10px;
 <li>Early 8 = loss</li>
 </ul>
 
-<h3>🏆 League Rules (APA Simplified)</h3>
+<h3>📊 ELO Rating</h3>
 <ul>
-<li>Open break (no group assigned yet)</li>
-<li>First called shot determines solids/stripes</li>
-<li>Ball-in-hand after fouls</li>
-<li>Defense allowed (safe play)</li>
-<li>8 must be called and clean</li>
-</ul>
-
-<h3>⚠️ Common Situations</h3>
-<ul>
-<li>Missed call → does not count (house rules)</li>
-<li>Disagreement → replay or decide quickly</li>
-<li>Combo shots allowed if final ball is called</li>
+<li>ELO is a skill rating based on wins/losses.</li>
+<li>Beat stronger players → gain more points.</li>
+<li>Lose to weaker players → lose more points.</li>
+<li>Helps track long-term performance.</li>
 </ul>
 
 </details>
@@ -238,12 +252,14 @@ border-radius:10px;
 
 <script>
 
-const VERSION="3.7.0"
+const VERSION="3.8.0"
 
 const SUPABASE_URL="https://wybycecwkvrukcfoqgpa.supabase.co"
 const SUPABASE_KEY="sb_publishable_nNpJJg1ZBcQSjbX1HhPeKg_5KeR8ngb"
 
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY)
+
+const K=20
 
 let players=[]
 let games=[]
@@ -307,12 +323,13 @@ loadData()
 
 function computeStats(){
 
-const stats={},streak={}
+const stats={},elo={},streak={}
 
 games.slice().reverse().forEach(g=>{
 
 [g.player1,g.player2].forEach(p=>{
 if(!stats[p])stats[p]={w:0,l:0}
+if(!elo[p])elo[p]=1000
 if(!streak[p])streak[p]=0
 })
 
@@ -325,25 +342,54 @@ stats[loser].l++
 streak[winner]++
 streak[loser]=0
 
+const exp=1/(1+Math.pow(10,(elo[loser]-elo[winner])/400))
+
+elo[winner]+=K*(1-exp)
+elo[loser]+=K*(0-(1-exp))
+
 })
 
-return{stats,streak}
+return{stats,elo,streak}
 
 }
 
 function renderStandings(){
 
-const {stats,streak}=computeStats()
+const {stats,elo,streak}=computeStats()
 
-const list=Object.entries(stats)
+const list=Object.entries(stats).sort((a,b)=>elo[b[0]]-elo[a[0]])
 
-document.getElementById("standings").innerHTML=list.map(([p,s])=>{
+document.getElementById("standings").innerHTML=`
 
+<table class="standings-table">
+<tr>
+<th>#</th>
+<th>Player</th>
+<th>Record</th>
+<th>ELO</th>
+<th>Win %</th>
+</tr>
+
+${list.map(([p,s],i)=>{
+
+const games=s.w+s.l
+const pct=((s.w/games)*100).toFixed(1)
 const st=streak[p]>1?`<span class="tooltip" data-tip="Current win streak">🔥 ${streak[p]}</span>`:""
 
-return`<div>${p} ${s.w}-${s.l} ${st}</div>`
+return`
+<tr>
+<td>${i+1}</td>
+<td><b>${p}</b> ${st}</td>
+<td>${s.w}-${s.l}</td>
+<td class="tooltip" data-tip="Skill rating based on results">${Math.round(elo[p])}</td>
+<td>${pct}%</td>
+</tr>
+`
 
-}).join("")
+}).join("")}
+
+</table>
+`
 
 }
 
@@ -357,7 +403,7 @@ return
 const last=games[0].winner
 
 document.getElementById("king").innerHTML=`
-<div class="king tooltip" data-tip="Last game winner holds the table">
+<div class="king tooltip" data-tip="Last winner holds the table">
 👑 ${last}
 </div>
 `
@@ -368,10 +414,11 @@ function renderHistory(){
 
 document.getElementById("history").innerHTML=
 games.map(g=>`
-<div>
+<div class="history-item">
 <div class="muted">${new Date(g.date).toLocaleString()}</div>
 <b>${g.winner}</b> beat ${g.winner===g.player1?g.player2:g.player1}
-</div>`).join("")
+</div>
+`).join("")
 
 }
 
