@@ -15,10 +15,8 @@
 --muted:#9ca3af;
 --text:#e5e7eb;
 --line:#2a2a35;
-
 --accent:#6f2dbd;
 --accent-hover:#5a23a3;
-
 --shadow:0 6px 25px rgba(0,0,0,0.4);
 --radius:14px;
 }
@@ -65,9 +63,7 @@ color:white;
 font-weight:600;
 }
 
-button:hover{
-background:var(--accent-hover);
-}
+button:hover{background:var(--accent-hover)}
 
 .row{display:flex;gap:10px;flex-wrap:wrap}
 .row>*{flex:1}
@@ -89,6 +85,25 @@ background:rgba(111,45,189,0.2);
 margin-left:6px;
 }
 
+/* Tooltip */
+.tooltip{
+position:relative;
+cursor:pointer;
+}
+
+.tooltip:hover::after{
+content:attr(data-tip);
+position:absolute;
+bottom:125%;
+left:50%;
+transform:translateX(-50%);
+background:#111;
+padding:6px 8px;
+border-radius:6px;
+font-size:11px;
+white-space:nowrap;
+}
+
 .history{
 max-height:280px;
 overflow-y:auto;
@@ -99,12 +114,8 @@ width:100%;
 border-collapse:collapse;
 }
 
-.standings-table th,
 .standings-table td{
 padding:8px 6px;
-}
-
-.standings-table tr{
 border-bottom:1px solid var(--line);
 }
 
@@ -115,7 +126,6 @@ text-align:center;
 padding:12px;
 background:rgba(111,45,189,0.15);
 border-radius:10px;
-margin-bottom:10px;
 }
 
 </style>
@@ -135,14 +145,6 @@ margin-bottom:10px;
 <div class="row">
 <select id="player1"></select>
 <select id="player2"></select>
-</div>
-
-<div class="row">
-<select id="gameType">
-<option>8 Ball</option>
-<option>9 Ball</option>
-<option>Other</option>
-</select>
 </div>
 
 <div class="btnrow">
@@ -170,17 +172,39 @@ margin-bottom:10px;
 <details>
 <summary>📜 Rules</summary>
 
-<p><b>House Rules (8 Ball)</b></p>
+<h3>🧠 Core Concepts</h3>
 <ul>
-<li>Call pocket on 8</li>
-<li>Scratch on 8 = loss</li>
-<li>No slop shots</li>
+<li><b>Scratch:</b> Cue ball goes into a pocket or off table → opponent gets ball-in-hand.</li>
+<li><b>Ball-in-hand:</b> You can place the cue ball anywhere before shooting.</li>
+<li><b>Slop shot:</b> Ball goes in a pocket you DID NOT call → counts only if “slop allowed.”</li>
+<li><b>Call shot:</b> You must call ball + pocket before shooting.</li>
+<li><b>Legal shot:</b> Must hit your ball group first, or a rail after contact.</li>
+<li><b>Break:</b> First shot of game — spreads balls.</li>
 </ul>
 
-<p><b>APA Notes</b></p>
+<h3>🏠 House Rules (Simple)</h3>
 <ul>
-<li>Ball-in-hand on scratch</li>
+<li>Call all shots (no slop)</li>
+<li>Scratch = ball-in-hand</li>
+<li>Scratch on 8 = loss</li>
 <li>8 must be called</li>
+<li>Early 8 = loss</li>
+</ul>
+
+<h3>🏆 League Rules (APA Simplified)</h3>
+<ul>
+<li>Open break (no group assigned yet)</li>
+<li>First called shot determines solids/stripes</li>
+<li>Ball-in-hand after fouls</li>
+<li>Defense allowed (safe play)</li>
+<li>8 must be called and clean</li>
+</ul>
+
+<h3>⚠️ Common Situations</h3>
+<ul>
+<li>Missed call → does not count (house rules)</li>
+<li>Disagreement → replay or decide quickly</li>
+<li>Combo shots allowed if final ball is called</li>
 </ul>
 
 </details>
@@ -199,7 +223,7 @@ margin-bottom:10px;
 <div class="grid">
 
 <div class="card">
-<h2>👑 King of the Table</h2>
+<h2>👑 King</h2>
 <div id="king"></div>
 </div>
 
@@ -214,14 +238,12 @@ margin-bottom:10px;
 
 <script>
 
-const VERSION="3.5.0"
+const VERSION="3.7.0"
 
 const SUPABASE_URL="https://wybycecwkvrukcfoqgpa.supabase.co"
 const SUPABASE_KEY="sb_publishable_nNpJJg1ZBcQSjbX1HhPeKg_5KeR8ngb"
 
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY)
-
-const K=20
 
 let players=[]
 let games=[]
@@ -240,17 +262,58 @@ renderAll()
 
 }
 
+function renderPlayers(){
+
+const p1=document.getElementById("player1")
+const p2=document.getElementById("player2")
+
+p1.innerHTML=players.map(p=>`<option>${p}</option>`).join("")
+p2.innerHTML=players.map(p=>`<option>${p}</option>`).join("")
+
+p1.onchange=updateButtons
+p2.onchange=updateButtons
+
+updateButtons()
+
+}
+
+function updateButtons(){
+
+const p1=document.getElementById("player1").value||"Player 1"
+const p2=document.getElementById("player2").value||"Player 2"
+
+document.getElementById("p1WinBtn").textContent=p1+" Won"
+document.getElementById("p2WinBtn").textContent=p2+" Won"
+
+}
+
+async function logWin(which){
+
+const p1=document.getElementById("player1").value
+const p2=document.getElementById("player2").value
+
+if(p1===p2)return alert("Players must be different.")
+
+await sb.from("games").insert({
+player1:p1,
+player2:p2,
+winner:which===1?p1:p2,
+date:new Date().toISOString()
+})
+
+loadData()
+
+}
+
 function computeStats(){
 
-const stats={},elo={},streak={},maxStreak={}
+const stats={},streak={}
 
 games.slice().reverse().forEach(g=>{
 
 [g.player1,g.player2].forEach(p=>{
 if(!stats[p])stats[p]={w:0,l:0}
-if(!elo[p])elo[p]=1000
 if(!streak[p])streak[p]=0
-if(!maxStreak[p])maxStreak[p]=0
 })
 
 const winner=g.winner
@@ -262,16 +325,25 @@ stats[loser].l++
 streak[winner]++
 streak[loser]=0
 
-maxStreak[winner]=Math.max(maxStreak[winner],streak[winner])
-
-const exp=1/(1+Math.pow(10,(elo[loser]-elo[winner])/400))
-
-elo[winner]+=K*(1-exp)
-elo[loser]+=K*(0-(1-exp))
-
 })
 
-return{stats,elo,streak,maxStreak}
+return{stats,streak}
+
+}
+
+function renderStandings(){
+
+const {stats,streak}=computeStats()
+
+const list=Object.entries(stats)
+
+document.getElementById("standings").innerHTML=list.map(([p,s])=>{
+
+const st=streak[p]>1?`<span class="tooltip" data-tip="Current win streak">🔥 ${streak[p]}</span>`:""
+
+return`<div>${p} ${s.w}-${s.l} ${st}</div>`
+
+}).join("")
 
 }
 
@@ -282,81 +354,13 @@ document.getElementById("king").innerHTML="No games yet"
 return
 }
 
-const lastWinner=games[0].winner
-
-const {maxStreak}=computeStats()
-
-let bestPlayer=Object.entries(maxStreak).sort((a,b)=>b[1]-a[1])[0]
+const last=games[0].winner
 
 document.getElementById("king").innerHTML=`
-<div class="king">
-👑 <b>${lastWinner}</b><br>
-Current King<br><br>
-🔥 Best Streak: ${bestPlayer[0]} (${bestPlayer[1]})
+<div class="king tooltip" data-tip="Last game winner holds the table">
+👑 ${last}
 </div>
 `
-
-}
-
-function renderStandings(){
-
-const {stats,elo,streak}=computeStats()
-
-const list=Object.entries(stats).sort((a,b)=>elo[b[0]]-elo[a[0]])
-
-document.getElementById("standings").innerHTML=`
-
-<table class="standings-table">
-<tr>
-<th>#</th>
-<th>Player</th>
-<th>Record</th>
-<th>ELO</th>
-<th>Win %</th>
-</tr>
-
-${list.map(([p,s],i)=>{
-
-const games=s.w+s.l
-const pct=((s.w/games)*100).toFixed(1)
-const st=streak[p]>1?` 🔥 ${streak[p]}`:""
-
-return`
-<tr>
-<td>${i+1}</td>
-<td class="player-click" onclick="showHead('${p}')"><b>${p}</b>${st}</td>
-<td>${s.w}-${s.l}</td>
-<td>${Math.round(elo[p])}</td>
-<td>${pct}%</td>
-</tr>
-`
-
-}).join("")}
-
-</table>
-`
-
-}
-
-function showHead(p){
-
-let r={}
-
-games.forEach(g=>{
-if(g.player1===p||g.player2===p){
-let o=g.player1===p?g.player2:g.player1
-if(!r[o])r[o]={w:0,l:0}
-if(g.winner===p)r[o].w++
-else r[o].l++
-}
-})
-
-let txt=`${p} head-to-head:\n\n`
-Object.entries(r).forEach(([o,v])=>{
-txt+=`${p} vs ${o}: ${v.w}-${v.l}\n`
-})
-
-alert(txt)
 
 }
 
@@ -367,29 +371,6 @@ games.map(g=>`
 <div>
 <div class="muted">${new Date(g.date).toLocaleString()}</div>
 <b>${g.winner}</b> beat ${g.winner===g.player1?g.player2:g.player1}
-</div>
-`).join("")
-
-}
-
-function renderPlayers(){
-
-const p1=document.getElementById("player1")
-const p2=document.getElementById("player2")
-
-p1.innerHTML=players.map(p=>`<option>${p}</option>`).join("")
-p2.innerHTML=players.map(p=>`<option>${p}</option>`).join("")
-
-updateButtons()
-
-document.getElementById("playerList").innerHTML=
-players.map(p=>`
-<div class="player-row">
-<div>${p}</div>
-<div>
-<button onclick="editPlayer('${p}')">Edit</button>
-<button onclick="deletePlayer('${p}')">Delete</button>
-</div>
 </div>`).join("")
 
 }
@@ -399,80 +380,18 @@ renderPlayers()
 renderStandings()
 renderHistory()
 renderKing()
+updateButtons()
 }
 
-function updateButtons(){
-const p1=document.getElementById("player1").value||"Player 1"
-const p2=document.getElementById("player2").value||"Player 2"
-document.getElementById("p1WinBtn").textContent=p1+" Won"
-document.getElementById("p2WinBtn").textContent=p2+" Won"
-}
-
-async function logWin(which){
-
-const p1=document.getElementById("player1").value
-const p2=document.getElementById("player2").value
-const gameType=document.getElementById("gameType").value
-
-if(p1===p2)return alert("Players must be different.")
-
-await sb.from("games").insert({
-player1:p1,
-player2:p2,
-winner:which===1?p1:p2,
-game_type:gameType,
-date:new Date().toISOString()
-})
-
-loadData()
-
-}
-
-async function deleteLast(){
-if(!games.length)return
-await sb.from("games").delete().eq("id",games[0].id)
-loadData()
-}
-
-function quickRematch(){
+document.getElementById("p1WinBtn").onclick=()=>logWin(1)
+document.getElementById("p2WinBtn").onclick=()=>logWin(2)
+document.getElementById("rematchBtn").onclick=()=>{
 let p1=document.getElementById("player1")
 let p2=document.getElementById("player2")
 let t=p1.value
 p1.value=p2.value
 p2.value=t
 updateButtons()
-}
-
-document.getElementById("p1WinBtn").onclick=()=>logWin(1)
-document.getElementById("p2WinBtn").onclick=()=>logWin(2)
-document.getElementById("rematchBtn").onclick=quickRematch
-document.getElementById("addPlayerBtn").onclick=addPlayer
-document.getElementById("deleteLastBtn").onclick=deleteLast
-
-async function addPlayer(){
-let n=document.getElementById("newPlayer").value.trim()
-if(!n||players.includes(n))return
-await sb.from("players").insert({name:n})
-document.getElementById("newPlayer").value=""
-loadData()
-}
-
-async function editPlayer(oldName){
-let newName=prompt("Edit player name",oldName)
-if(!newName)return
-await sb.from("players").update({name:newName}).eq("name",oldName)
-await sb.from("games").update({player1:newName}).eq("player1",oldName)
-await sb.from("games").update({player2:newName}).eq("player2",oldName)
-await sb.from("games").update({winner:newName}).eq("winner",oldName)
-loadData()
-}
-
-async function deletePlayer(name){
-let used=games.some(g=>g.player1===name||g.player2===name)
-if(used)return alert("Cannot delete player with logged games.")
-if(!confirm("Delete "+name+" ?"))return
-await sb.from("players").delete().eq("name",name)
-loadData()
 }
 
 loadData()
