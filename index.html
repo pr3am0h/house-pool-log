@@ -8,224 +8,112 @@
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
 <style>
-
 :root{
 --bg:#0b0b10;
 --card:#14141c;
---muted:#9ca3af;
 --text:#e5e7eb;
---line:#2a2a35;
 --accent:#6f2dbd;
---accent-hover:#5a23a3;
---shadow:0 6px 25px rgba(0,0,0,0.4);
 --radius:14px;
 }
 
 body{
 font-family:system-ui;
-background:
-radial-gradient(circle at top left, rgba(111,45,189,0.15), transparent 40%),
-radial-gradient(circle at bottom right, rgba(111,45,189,0.1), transparent 50%),
-var(--bg);
-padding:20px;
-max-width:1100px;
-margin:auto;
+background:var(--bg);
 color:var(--text);
+padding:14px;
+max-width:900px;
+margin:auto;
 }
-
-.banner{
-margin-bottom:16px;
-padding:10px 14px;
-border-radius:10px;
-background:rgba(111,45,189,0.15);
-text-align:center;
-font-weight:600;
-}
-
-.layout{
-display:grid;
-grid-template-columns:2fr 1fr;
-gap:16px;
-}
-
-@media(max-width:900px){
-.layout{grid-template-columns:1fr}
-}
-
-.grid{display:grid;gap:14px;}
 
 .card{
 background:var(--card);
+padding:14px;
 border-radius:var(--radius);
-padding:16px;
-box-shadow:var(--shadow);
-border:1px solid rgba(255,255,255,0.04);
+margin-bottom:12px;
 }
 
-button{
-padding:10px 12px;
-border:none;
-border-radius:10px;
-cursor:pointer;
-background:var(--accent);
-color:white;
-font-weight:600;
-}
-
-button:hover{background:var(--accent-hover)}
-
-.row{display:flex;gap:10px;flex-wrap:wrap}
+.row{display:flex;gap:10px}
 .row>*{flex:1}
 
-.btnrow{display:flex;gap:10px;margin-top:10px}
-
-.tooltip{
-position:relative;
-cursor:pointer;
-}
-
-.tooltip:hover::after{
-content:attr(data-tip);
-position:absolute;
-bottom:125%;
-left:50%;
-transform:translateX(-50%);
-background:#111;
-padding:6px 8px;
-border-radius:6px;
-font-size:11px;
-white-space:nowrap;
-}
-
-.standings-table{
-width:100%;
-border-collapse:collapse;
-}
-
-.standings-table th,
-.standings-table td{
-padding:8px 6px;
-text-align:left;
-}
-
-.standings-table tr{
-border-bottom:1px solid var(--line);
-}
-
-.standings-table tr:first-child{
-background:rgba(111,45,189,0.15);
+button{
+padding:14px;
+border:none;
+border-radius:10px;
+background:var(--accent);
+color:white;
+font-size:16px;
 font-weight:bold;
 }
 
-.history{
-display:flex;
-flex-direction:column;
-gap:8px;
-max-height:300px;
-overflow-y:auto;
-}
-
-.history-item{
-padding:10px;
-border-radius:10px;
-background:#11131a;
-border:1px solid rgba(255,255,255,0.04);
-}
-
-.muted{font-size:12px;color:var(--muted)}
-
-.king{
-text-align:center;
+select,input{
 padding:12px;
-background:rgba(111,45,189,0.15);
 border-radius:10px;
+border:none;
+font-size:16px;
 }
 
+.stat{
+background:#111;
+padding:8px;
+border-radius:10px;
+margin-top:6px;
+}
+
+.big{
+font-size:20px;
+font-weight:bold;
+}
 </style>
 </head>
 
 <body>
 
-<h1>🎱 House Pool Log <span id="badge"></span></h1>
-
-<div id="lastGameBanner"></div>
-
-<div class="layout">
-
-<div class="grid">
+<h2>🎱 Pool Log</h2>
 
 <div class="card">
-<h2>📝 Log Game</h2>
 
 <div class="row">
 <select id="player1"></select>
 <select id="player2"></select>
 </div>
 
-<div class="btnrow">
+<div class="row">
 <button id="p1WinBtn"></button>
 <button id="p2WinBtn"></button>
 </div>
 
-<div class="btnrow">
-<button id="rematchBtn" class="tooltip" data-tip="Swap players for next game">🔁 Rematch</button>
-</div>
+<button id="rematchBtn">🔁 Rematch</button>
+
+<div id="h2h"></div>
+
 </div>
 
 <div class="card">
-<h2>👥 Players</h2>
-
-<div class="row">
-<input id="newPlayer" placeholder="Enter player name">
+<input id="newPlayer" placeholder="Player name">
 <button id="addPlayerBtn">Add Player</button>
 </div>
 
-</div>
+<div class="card" id="king"></div>
+<div class="card" id="potn"></div>
+<div class="card" id="standings"></div>
+<div class="card" id="playerStats"></div>
 
 <div class="card">
-<details open>
-<summary>🕙 Game History</summary>
-<div id="history" class="history"></div>
-<button id="deleteLastBtn">Undo Last Game</button>
-</details>
-</div>
-
-</div>
-
-<div class="grid">
-
-<div class="card">
-<h2>👑 King</h2>
-<div id="king"></div>
-</div>
-
-<div class="card">
-<h2>🏆 Standings</h2>
-<div id="standings"></div>
-</div>
-
-</div>
-
+<div id="history"></div>
+<button id="deleteLastBtn">Undo</button>
 </div>
 
 <script>
 
-const VERSION="4.1.0"
+const sb=supabase.createClient(
+"https://wybycecwkvrukcfoqgpa.supabase.co",
+"sb_publishable_nNpJJg1ZBcQSjbX1HhPeKg_5KeR8ngb"
+)
 
-const SUPABASE_URL="https://wybycecwkvrukcfoqgpa.supabase.co"
-const SUPABASE_KEY="sb_publishable_nNpJJg1ZBcQSjbX1HhPeKg_5KeR8ngb"
-
-const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY)
-
+let players=[],games=[]
 const K=20
 
-let players=[]
-let games=[]
-
-document.getElementById("badge").textContent="v"+VERSION
-
 async function loadData(){
-
 const {data:p}=await sb.from("players").select("name").order("name")
 players=p?.map(x=>x.name)||[]
 
@@ -236,180 +124,174 @@ renderAll()
 }
 
 function renderPlayers(){
-
-const p1=document.getElementById("player1")
-const p2=document.getElementById("player2")
-
-const currentP1=p1.value
-const currentP2=p2.value
-
-p1.innerHTML=players.map(p=>`<option>${p}</option>`).join("")
-p2.innerHTML=players.map(p=>`<option>${p}</option>`).join("")
-
-if(players.includes(currentP1)) p1.value=currentP1
-if(players.includes(currentP2)) p2.value=currentP2
-
+player1.innerHTML=players.map(p=>`<option>${p}</option>`).join("")
+player2.innerHTML=players.map(p=>`<option>${p}</option>`).join("")
 updateButtons()
 }
 
 function updateButtons(){
+p1WinBtn.textContent=player1.value+" Won"
+p2WinBtn.textContent=player2.value+" Won"
+renderH2H()
+}
 
-const p1=document.getElementById("player1").value||"Player 1"
-const p2=document.getElementById("player2").value||"Player 2"
+function renderH2H(){
+let p1=player1.value,p2=player2.value
+let w1=0,w2=0
 
-document.getElementById("p1WinBtn").textContent=p1+" Won"
-document.getElementById("p2WinBtn").textContent=p2+" Won"
+games.forEach(g=>{
+if((g.player1===p1&&g.player2===p2)||(g.player1===p2&&g.player2===p1)){
+if(g.winner===p1)w1++
+if(g.winner===p2)w2++
+}
+})
+
+h2h.innerHTML=`${p1} leads ${p2} ${w1}-${w2}`
 }
 
 async function logWin(which){
-
-const p1=document.getElementById("player1").value
-const p2=document.getElementById("player2").value
-
-if(p1===p2)return alert("Players must be different.")
-
-await sb.from("games").insert({
-player1:p1,
-player2:p2,
-winner:which===1?p1:p2
-})
-
+let p1=player1.value,p2=player2.value
+await sb.from("games").insert({player1:p1,player2:p2,winner:which===1?p1:p2})
 loadData()
 }
 
-/* ADD PLAYER */
-document.getElementById("addPlayerBtn").onclick=async()=>{
-
-const input=document.getElementById("newPlayer")
-const name=input.value.trim()
-
-if(!name)return alert("Enter a player name.")
-
-if(players.includes(name)){
-alert("Player already exists.")
-return
+addPlayerBtn.onclick=async()=>{
+let name=newPlayer.value.trim()
+if(!name)return
+await sb.from("players").insert({name})
+newPlayer.value=""
+loadData()
 }
 
-const {error}=await sb.from("players").insert({name})
-
-if(error){
-console.error(error)
-alert("Error adding player")
-return
-}
-
-input.value=""
-
-// 🔥 auto select new player
-await loadData()
-document.getElementById("player2").value=name
-updateButtons()
-}
-
-/* UNDO LAST GAME */
-document.getElementById("deleteLastBtn").onclick=async()=>{
-
+deleteLastBtn.onclick=async()=>{
 if(!games.length)return
-
 await sb.from("games").delete().eq("id",games[0].id)
-
 loadData()
 }
 
 function computeStats(){
 
-const stats={},elo={}
+let stats={},elo={}
 
 games.slice().reverse().forEach(g=>{
 
 [g.player1,g.player2].forEach(p=>{
-if(!stats[p])stats[p]={w:0,l:0}
+if(!stats[p])stats[p]={w:0,l:0,history:[]}
 if(!elo[p])elo[p]=1000
 })
 
-const winner=g.winner
-const loser=winner===g.player1?g.player2:g.player1
+let w=g.winner
+let l=w===g.player1?g.player2:g.player1
 
-stats[winner].w++
-stats[loser].l++
+stats[w].w++
+stats[l].l++
 
-const exp=1/(1+Math.pow(10,(elo[loser]-elo[winner])/400))
+stats[w].history.push(1)
+stats[l].history.push(0)
 
-elo[winner]+=K*(1-exp)
-elo[loser]+=K*(0-(1-exp))
+let exp=1/(1+Math.pow(10,(elo[l]-elo[w])/400))
+elo[w]+=K*(1-exp)
+elo[l]+=K*(0-(1-exp))
 
 })
 
-return{stats,elo}
+return {stats,elo}
+}
+
+function trendArrow(arr){
+let sum=arr.slice(-5).reduce((a,b)=>a+b,0)
+if(sum>=4)return "📈"
+if(sum<=1)return "📉"
+return "➡️"
 }
 
 function renderStandings(){
+let {stats,elo}=computeStats()
 
-const {stats,elo}=computeStats()
-
-const list=Object.entries(stats).sort((a,b)=>elo[b[0]]-elo[a[0]])
-
-document.getElementById("standings").innerHTML=`
-
-<table class="standings-table">
-<tr>
-<th>#</th>
-<th>Player</th>
-<th>Record</th>
-<th>ELO</th>
-</tr>
-
-${list.map(([p,s],i)=>`
-<tr>
-<td>${i+1}</td>
-<td><b>${p}</b></td>
-<td>${s.w}-${s.l}</td>
-<td>${Math.round(elo[p])}</td>
-</tr>
-`).join("")}
-
-</table>
-`
+standings.innerHTML=Object.entries(stats)
+.sort((a,b)=>elo[b[0]]-elo[a[0]])
+.map(([p,s],i)=>`
+<div class="stat">
+${i+1}. ${p} (${s.w}-${s.l}) | ELO ${Math.round(elo[p])}
+</div>
+`).join("")
 }
 
 function renderKing(){
 
-if(!games.length){
-document.getElementById("king").innerHTML="No games yet"
-return
+if(!games.length){king.innerHTML="No games";return}
+
+let best=0,cur=0,last=null
+
+games.slice().reverse().forEach(g=>{
+if(g.winner===last){cur++}else{cur=1;last=g.winner}
+best=Math.max(best,cur)
+})
+
+king.innerHTML=`👑 Current: ${games[0].winner}<br>🔥 Best streak: ${best}`
 }
 
-document.getElementById("king").innerHTML=`👑 ${games[0].winner}`
+function renderPlayerStats(){
+
+let {stats,elo}=computeStats()
+
+playerStats.innerHTML=Object.entries(stats).map(([p,s])=>{
+
+let total=s.w+s.l
+let pct=((s.w/total)*100||0).toFixed(1)
+let last10=s.history.slice(-10)
+
+return `
+<div class="stat">
+<b>${p}</b><br>
+Win%: ${pct}%<br>
+ELO: ${Math.round(elo[p])}<br>
+Last10: ${last10.map(x=>x?"W":"L").join("")} ${trendArrow(last10)}
+</div>
+`
+
+}).join("")
+}
+
+function renderPOTN(){
+
+let today=games.slice(0,20)
+
+let score={}
+
+today.forEach(g=>{
+if(!score[g.winner])score[g.winner]=0
+score[g.winner]++
+})
+
+let best=Object.entries(score).sort((a,b)=>b[1]-a[1])[0]
+
+potn.innerHTML=best?`🏆 Player of the Night: ${best[0]} (${best[1]} wins)`:""
 }
 
 function renderHistory(){
-
-document.getElementById("history").innerHTML=
-games.map(g=>`
-<div class="history-item">
-<div class="muted">${new Date(g.date).toLocaleString()}</div>
-<b>${g.winner}</b> beat ${g.winner===g.player1?g.player2:g.player1}
-</div>
+history.innerHTML=games.map(g=>`
+${g.winner} beat ${g.winner===g.player1?g.player2:g.player1}<br>
 `).join("")
 }
 
 function renderAll(){
 renderPlayers()
 renderStandings()
-renderHistory()
 renderKing()
+renderPlayerStats()
+renderPOTN()
+renderHistory()
 updateButtons()
 }
 
-document.getElementById("p1WinBtn").onclick=()=>logWin(1)
-document.getElementById("p2WinBtn").onclick=()=>logWin(2)
+p1WinBtn.onclick=()=>logWin(1)
+p2WinBtn.onclick=()=>logWin(2)
 
-document.getElementById("rematchBtn").onclick=()=>{
-let p1=document.getElementById("player1")
-let p2=document.getElementById("player2")
-let t=p1.value
-p1.value=p2.value
-p2.value=t
+rematchBtn.onclick=()=>{
+let t=player1.value
+player1.value=player2.value
+player2.value=t
 updateButtons()
 }
 
