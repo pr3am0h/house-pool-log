@@ -210,7 +210,7 @@ border-radius:10px;
 
 <script>
 
-const VERSION="4.0.0"
+const VERSION="4.1.0"
 
 const SUPABASE_URL="https://wybycecwkvrukcfoqgpa.supabase.co"
 const SUPABASE_KEY="sb_publishable_nNpJJg1ZBcQSjbX1HhPeKg_5KeR8ngb"
@@ -227,10 +227,10 @@ document.getElementById("badge").textContent="v"+VERSION
 async function loadData(){
 
 const {data:p}=await sb.from("players").select("name").order("name")
-players=p?.map(x=>x.name) || []
+players=p?.map(x=>x.name)||[]
 
 const {data:g}=await sb.from("games").select("*").order("date",{ascending:false})
-games=g || []
+games=g||[]
 
 renderAll()
 }
@@ -240,13 +240,20 @@ function renderPlayers(){
 const p1=document.getElementById("player1")
 const p2=document.getElementById("player2")
 
+const currentP1=p1.value
+const currentP2=p2.value
+
 p1.innerHTML=players.map(p=>`<option>${p}</option>`).join("")
 p2.innerHTML=players.map(p=>`<option>${p}</option>`).join("")
+
+if(players.includes(currentP1)) p1.value=currentP1
+if(players.includes(currentP2)) p2.value=currentP2
 
 updateButtons()
 }
 
 function updateButtons(){
+
 const p1=document.getElementById("player1").value||"Player 1"
 const p2=document.getElementById("player2").value||"Player 2"
 
@@ -270,8 +277,8 @@ winner:which===1?p1:p2
 loadData()
 }
 
-/* 🔥 FIXED ADD PLAYER */
-document.getElementById("addPlayerBtn").onclick = async () => {
+/* ADD PLAYER */
+document.getElementById("addPlayerBtn").onclick=async()=>{
 
 const input=document.getElementById("newPlayer")
 const name=input.value.trim()
@@ -292,17 +299,19 @@ return
 }
 
 input.value=""
-loadData()
+
+// 🔥 auto select new player
+await loadData()
+document.getElementById("player2").value=name
+updateButtons()
 }
 
-/* 🔥 UNDO LAST GAME */
-document.getElementById("deleteLastBtn").onclick = async () => {
+/* UNDO LAST GAME */
+document.getElementById("deleteLastBtn").onclick=async()=>{
 
-if(!games.length) return
+if(!games.length)return
 
-const last=games[0]
-
-await sb.from("games").delete().eq("id",last.id)
+await sb.from("games").delete().eq("id",games[0].id)
 
 loadData()
 }
