@@ -12,7 +12,9 @@
 --bg:#0b0b10;
 --card:#14141c;
 --text:#e5e7eb;
+--muted:#9ca3af;
 --accent:#6f2dbd;
+--line:#2a2a35;
 --radius:14px;
 }
 
@@ -54,14 +56,28 @@ font-size:16px;
 
 .stat{
 background:#111;
-padding:8px;
+padding:10px;
 border-radius:10px;
-margin-top:6px;
+margin-top:8px;
+border:1px solid var(--line);
 }
 
-.big{
-font-size:20px;
-font-weight:bold;
+.leader{
+display:flex;
+justify-content:space-between;
+align-items:center;
+padding:10px;
+border-bottom:1px solid var(--line);
+}
+
+.leader:last-child{border-bottom:none}
+
+.name{font-weight:bold}
+.small{color:var(--muted);font-size:13px}
+
+.rules{
+font-size:14px;
+line-height:1.5;
 }
 </style>
 </head>
@@ -84,7 +100,7 @@ font-weight:bold;
 
 <button id="rematchBtn">🔁 Rematch</button>
 
-<div id="h2h"></div>
+<div id="h2h" class="small"></div>
 
 </div>
 
@@ -102,6 +118,8 @@ font-weight:bold;
 <div id="history"></div>
 <button id="deleteLastBtn">Undo</button>
 </div>
+
+<div class="card rules" id="rules"></div>
 
 <script>
 
@@ -126,6 +144,12 @@ renderAll()
 function renderPlayers(){
 player1.innerHTML=players.map(p=>`<option>${p}</option>`).join("")
 player2.innerHTML=players.map(p=>`<option>${p}</option>`).join("")
+
+// prevent same player vs self
+if(player1.value===player2.value && players.length>1){
+player2.selectedIndex=1
+}
+
 updateButtons()
 }
 
@@ -134,6 +158,9 @@ p1WinBtn.textContent=player1.value+" Won"
 p2WinBtn.textContent=player2.value+" Won"
 renderH2H()
 }
+
+player1.onchange=updateButtons
+player2.onchange=updateButtons
 
 function renderH2H(){
 let p1=player1.value,p2=player2.value
@@ -151,7 +178,15 @@ h2h.innerHTML=`${p1} leads ${p2} ${w1}-${w2}`
 
 async function logWin(which){
 let p1=player1.value,p2=player2.value
-await sb.from("games").insert({player1:p1,player2:p2,winner:which===1?p1:p2})
+
+if(p1===p2)return
+
+await sb.from("games").insert({
+player1:p1,
+player2:p2,
+winner:which===1?p1:p2
+})
+
 loadData()
 }
 
@@ -210,21 +245,35 @@ let {stats,elo}=computeStats()
 
 standings.innerHTML=Object.entries(stats)
 .sort((a,b)=>elo[b[0]]-elo[a[0]])
-.map(([p,s],i)=>`
-<div class="stat">
-${i+1}. ${p} (${s.w}-${s.l}) | ELO ${Math.round(elo[p])}
+.map(([p,s],i)=>{
+
+let total=s.w+s.l
+let pct=((s.w/total)*100||0).toFixed(1)
+
+return `
+<div class="leader">
+  <div>
+    <div class="name">${i+1}. ${p}</div>
+    <div class="small">${s.w}-${s.l} • ${pct}%</div>
+  </div>
+  <div><b>${Math.round(elo[p])}</b></div>
 </div>
-`).join("")
+`
+}).join("")
 }
 
 function renderKing(){
 
-if(!games.length){king.innerHTML="No games";return}
+if(!games.length){
+king.innerHTML="No games yet"
+return
+}
 
 let best=0,cur=0,last=null
 
 games.slice().reverse().forEach(g=>{
-if(g.winner===last){cur++}else{cur=1;last=g.winner}
+if(g.winner===last){cur++}
+else{cur=1;last=g.winner}
 best=Math.max(best,cur)
 })
 
@@ -243,10 +292,11 @@ let last10=s.history.slice(-10)
 
 return `
 <div class="stat">
-<b>${p}</b><br>
-Win%: ${pct}%<br>
-ELO: ${Math.round(elo[p])}<br>
-Last10: ${last10.map(x=>x?"W":"L").join("")} ${trendArrow(last10)}
+<div class="name">${p}</div>
+<div class="small">Win%: ${pct}% • ELO ${Math.round(elo[p])}</div>
+<div style="margin-top:6px">
+${last10.map(x=>x?"🟩":"⬛").join("")} ${trendArrow(last10)}
+</div>
 </div>
 `
 
@@ -255,11 +305,10 @@ Last10: ${last10.map(x=>x?"W":"L").join("")} ${trendArrow(last10)}
 
 function renderPOTN(){
 
-let today=games.slice(0,20)
-
+let recent=games.slice(0,20)
 let score={}
 
-today.forEach(g=>{
+recent.forEach(g=>{
 if(!score[g.winner])score[g.winner]=0
 score[g.winner]++
 })
@@ -271,8 +320,28 @@ potn.innerHTML=best?`🏆 Player of the Night: ${best[0]} (${best[1]} wins)`:""
 
 function renderHistory(){
 history.innerHTML=games.map(g=>`
-${g.winner} beat ${g.winner===g.player1?g.player2:g.player1}<br>
+<div class="small">${g.winner} beat ${g.winner===g.player1?g.player2:g.player1}</div>
 `).join("")
+}
+
+function renderRules(){
+
+rules.innerHTML=`
+<b>🏠 House Rules (Default)</b><br>
+• No call shots — slop counts<br>
+• Pocket the 8 ball to win<br>
+• Scratch on the 8 = loss<br>
+• Sink the 8 early = loss<br>
+• Keep games moving (casual play)<br><br>
+
+<b>🎱 APA 8-Ball (League Style)</b><br>
+• Call your shots (no slop)<br>
+• Must hit your group first<br>
+• Clear your group before the 8<br>
+• Scratch on the 8 = loss<br>
+• Early 8 = loss<br>
+• Defensive shots allowed<br>
+`
 }
 
 function renderAll(){
@@ -282,6 +351,7 @@ renderKing()
 renderPlayerStats()
 renderPOTN()
 renderHistory()
+renderRules()
 updateButtons()
 }
 
