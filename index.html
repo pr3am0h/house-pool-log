@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>House Pool Log</title>
+<title>Pool Log Pro</title>
 
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
@@ -34,7 +34,7 @@ border-radius:var(--radius);
 margin-bottom:12px;
 }
 
-.row{display:flex;gap:10px}
+.row{display:flex;gap:10px;flex-wrap:wrap}
 .row>*{flex:1}
 
 button{
@@ -43,7 +43,7 @@ border:none;
 border-radius:10px;
 background:var(--accent);
 color:white;
-font-size:16px;
+font-size:15px;
 font-weight:bold;
 }
 
@@ -51,33 +51,21 @@ select,input{
 padding:12px;
 border-radius:10px;
 border:none;
-font-size:16px;
+font-size:15px;
 }
 
-.stat{
-background:#111;
-padding:10px;
-border-radius:10px;
-margin-top:8px;
-border:1px solid var(--line);
-}
-
+.small{font-size:12px;color:var(--muted)}
 .leader{
 display:flex;
 justify-content:space-between;
-align-items:center;
 padding:10px;
 border-bottom:1px solid var(--line);
 }
 
-.leader:last-child{border-bottom:none}
-
-.name{font-weight:bold}
-.small{color:var(--muted);font-size:13px}
-
-.rules{
-font-size:14px;
-line-height:1.5;
+.tooltip{
+font-size:11px;
+color:var(--muted);
+margin-top:4px;
 }
 </style>
 </head>
@@ -98,28 +86,35 @@ line-height:1.5;
 <button id="p2WinBtn"></button>
 </div>
 
+<div class="row">
+<select id="winType">
+<option value="">Win Type</option>
+<option>8 Ball</option>
+<option>Opponent Scratch</option>
+<option>Opponent Early 8</option>
+<option>Scratch on 8</option>
+</select>
+</div>
+
+<div class="row">
 <button id="rematchBtn">🔁 Rematch</button>
+<button id="modeBtn">🏠 House Mode</button>
+<button id="kingModeBtn">👑 King Mode: OFF</button>
+</div>
+
+<div class="tooltip">Rematch swaps players quickly for next game</div>
+<div class="tooltip">Mode changes rule enforcement</div>
+<div class="tooltip">King Mode keeps winner on table</div>
 
 <div id="h2h" class="small"></div>
 
 </div>
 
-<div class="card">
-<input id="newPlayer" placeholder="Player name">
-<button id="addPlayerBtn">Add Player</button>
-</div>
-
-<div class="card" id="king"></div>
-<div class="card" id="potn"></div>
 <div class="card" id="standings"></div>
+<div class="card" id="king"></div>
 <div class="card" id="playerStats"></div>
 
-<div class="card">
-<div id="history"></div>
-<button id="deleteLastBtn">Undo</button>
-</div>
-
-<div class="card rules" id="rules"></div>
+<div class="card" id="history"></div>
 
 <script>
 
@@ -129,11 +124,12 @@ const sb=supabase.createClient(
 )
 
 let players=[],games=[]
-const K=20
+let mode="house"
+let kingMode=false
 
 async function loadData(){
-const {data:p}=await sb.from("players").select("name").order("name")
-players=p?.map(x=>x.name)||[]
+const {data:p}=await sb.from("players").select("name")
+players=p.map(x=>x.name)
 
 const {data:g}=await sb.from("games").select("*").order("date",{ascending:false})
 games=g||[]
@@ -144,12 +140,6 @@ renderAll()
 function renderPlayers(){
 player1.innerHTML=players.map(p=>`<option>${p}</option>`).join("")
 player2.innerHTML=players.map(p=>`<option>${p}</option>`).join("")
-
-// prevent same player vs self
-if(player1.value===player2.value && players.length>1){
-player2.selectedIndex=1
-}
-
 updateButtons()
 }
 
@@ -177,67 +167,55 @@ h2h.innerHTML=`${p1} leads ${p2} ${w1}-${w2}`
 }
 
 async function logWin(which){
-let p1=player1.value,p2=player2.value
 
-if(p1===p2)return
+let p1=player1.value,p2=player2.value
+let winner=which===1?p1:p2
+let loser=which===1?p2:p1
+let type=winType.value
+
+// APA enforcement
+if(mode==="apa"){
+if(!type){alert("Select win type");return}
+
+if(type==="Scratch on 8"){
+winner=loser
+}
+if(type==="Opponent Early 8"){
+winner=which===1?p1:p2
+}
+}
 
 await sb.from("games").insert({
 player1:p1,
 player2:p2,
-winner:which===1?p1:p2
+winner,
+win_type:type
 })
 
-loadData()
+if(kingMode){
+player1.value=winner
 }
 
-addPlayerBtn.onclick=async()=>{
-let name=newPlayer.value.trim()
-if(!name)return
-await sb.from("players").insert({name})
-newPlayer.value=""
-loadData()
-}
-
-deleteLastBtn.onclick=async()=>{
-if(!games.length)return
-await sb.from("games").delete().eq("id",games[0].id)
 loadData()
 }
 
 function computeStats(){
-
 let stats={},elo={}
-
 games.slice().reverse().forEach(g=>{
-
 [g.player1,g.player2].forEach(p=>{
-if(!stats[p])stats[p]={w:0,l:0,history:[]}
+if(!stats[p])stats[p]={w:0,l:0}
 if(!elo[p])elo[p]=1000
 })
-
 let w=g.winner
 let l=w===g.player1?g.player2:g.player1
-
 stats[w].w++
 stats[l].l++
 
-stats[w].history.push(1)
-stats[l].history.push(0)
-
 let exp=1/(1+Math.pow(10,(elo[l]-elo[w])/400))
-elo[w]+=K*(1-exp)
-elo[l]+=K*(0-(1-exp))
-
+elo[w]+=20*(1-exp)
+elo[l]+=20*(0-(1-exp))
 })
-
 return {stats,elo}
-}
-
-function trendArrow(arr){
-let sum=arr.slice(-5).reduce((a,b)=>a+b,0)
-if(sum>=4)return "📈"
-if(sum<=1)return "📉"
-return "➡️"
 }
 
 function renderStandings(){
@@ -245,123 +223,58 @@ let {stats,elo}=computeStats()
 
 standings.innerHTML=Object.entries(stats)
 .sort((a,b)=>elo[b[0]]-elo[a[0]])
-.map(([p,s],i)=>{
-
-let total=s.w+s.l
-let pct=((s.w/total)*100||0).toFixed(1)
-
-return `
+.map(([p,s],i)=>`
 <div class="leader">
-  <div>
-    <div class="name">${i+1}. ${p}</div>
-    <div class="small">${s.w}-${s.l} • ${pct}%</div>
-  </div>
-  <div><b>${Math.round(elo[p])}</b></div>
+<div>${i+1}. ${p} (${s.w}-${s.l})</div>
+<div>${Math.round(elo[p])}</div>
 </div>
-`
-}).join("")
+`).join("")
 }
 
 function renderKing(){
-
-if(!games.length){
-king.innerHTML="No games yet"
-return
-}
-
-let best=0,cur=0,last=null
-
-games.slice().reverse().forEach(g=>{
-if(g.winner===last){cur++}
-else{cur=1;last=g.winner}
-best=Math.max(best,cur)
-})
-
-king.innerHTML=`👑 Current: ${games[0].winner}<br>🔥 Best streak: ${best}`
+if(!games.length){king.innerHTML="";return}
+king.innerHTML=`👑 Current: ${games[0].winner}`
 }
 
 function renderPlayerStats(){
-
-let {stats,elo}=computeStats()
-
-playerStats.innerHTML=Object.entries(stats).map(([p,s])=>{
-
-let total=s.w+s.l
-let pct=((s.w/total)*100||0).toFixed(1)
-let last10=s.history.slice(-10)
-
-return `
-<div class="stat">
-<div class="name">${p}</div>
-<div class="small">Win%: ${pct}% • ELO ${Math.round(elo[p])}</div>
-<div style="margin-top:6px">
-${last10.map(x=>x?"🟩":"⬛").join("")} ${trendArrow(last10)}
-</div>
-</div>
-`
-
-}).join("")
-}
-
-function renderPOTN(){
-
-let recent=games.slice(0,20)
-let score={}
-
-recent.forEach(g=>{
-if(!score[g.winner])score[g.winner]=0
-score[g.winner]++
-})
-
-let best=Object.entries(score).sort((a,b)=>b[1]-a[1])[0]
-
-potn.innerHTML=best?`🏆 Player of the Night: ${best[0]} (${best[1]} wins)`:""
+let {stats}=computeStats()
+playerStats.innerHTML=Object.entries(stats).map(([p,s])=>`
+<div class="leader">${p} • ${s.w}-${s.l}</div>
+`).join("")
 }
 
 function renderHistory(){
 history.innerHTML=games.map(g=>`
-<div class="small">${g.winner} beat ${g.winner===g.player1?g.player2:g.player1}</div>
+<div class="small">${g.winner} won (${g.win_type||"quick win"})</div>
 `).join("")
 }
 
-function renderRules(){
-
-rules.innerHTML=`
-<b>🏠 House Rules (Default)</b><br>
-• No call shots — slop counts<br>
-• Pocket the 8 ball to win<br>
-• Scratch on the 8 = loss<br>
-• Sink the 8 early = loss<br>
-• Keep games moving (casual play)<br><br>
-
-<b>🎱 APA 8-Ball (League Style)</b><br>
-• Call your shots (no slop)<br>
-• Must hit your group first<br>
-• Clear your group before the 8<br>
-• Scratch on the 8 = loss<br>
-• Early 8 = loss<br>
-• Defensive shots allowed<br>
-`
+modeBtn.onclick=()=>{
+mode = mode==="house"?"apa":"house"
+modeBtn.textContent = mode==="house"?"🏠 House Mode":"🎱 APA Mode"
 }
 
-function renderAll(){
-renderPlayers()
-renderStandings()
-renderKing()
-renderPlayerStats()
-renderPOTN()
-renderHistory()
-renderRules()
+kingModeBtn.onclick=()=>{
+kingMode=!kingMode
+kingModeBtn.textContent=`👑 King Mode: ${kingMode?"ON":"OFF"}`
+}
+
+rematchBtn.onclick=()=>{
+let t=player1.value
+player1.value=player2.value
+player2.value=t
 updateButtons()
 }
 
 p1WinBtn.onclick=()=>logWin(1)
 p2WinBtn.onclick=()=>logWin(2)
 
-rematchBtn.onclick=()=>{
-let t=player1.value
-player1.value=player2.value
-player2.value=t
+function renderAll(){
+renderPlayers()
+renderStandings()
+renderKing()
+renderPlayerStats()
+renderHistory()
 updateButtons()
 }
 
