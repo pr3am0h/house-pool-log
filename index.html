@@ -3,175 +3,101 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>House Pool Log</title>
+<title>Pool Log Pro</title>
 
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
 <style>
-
 :root{
 --bg:#0b0b10;
 --card:#14141c;
---muted:#9ca3af;
 --text:#e5e7eb;
---line:#2a2a35;
+--muted:#9ca3af;
 --accent:#6f2dbd;
---accent-hover:#5a23a3;
---shadow:0 6px 25px rgba(0,0,0,0.4);
+--line:#2a2a35;
 --radius:14px;
 }
 
 body{
 font-family:system-ui;
-background:
-radial-gradient(circle at top left, rgba(111,45,189,0.15), transparent 40%),
-radial-gradient(circle at bottom right, rgba(111,45,189,0.1), transparent 50%),
-var(--bg);
-padding:20px;
-max-width:1100px;
-margin:auto;
+background:var(--bg);
 color:var(--text);
+padding:14px;
+max-width:900px;
+margin:auto;
 }
-
-.banner{
-margin-bottom:16px;
-padding:10px 14px;
-border-radius:10px;
-background:rgba(111,45,189,0.15);
-text-align:center;
-font-weight:600;
-}
-
-.layout{
-display:grid;
-grid-template-columns:2fr 1fr;
-gap:16px;
-}
-
-@media(max-width:900px){
-.layout{grid-template-columns:1fr}
-}
-
-.grid{display:grid;gap:14px;}
 
 .card{
 background:var(--card);
+padding:14px;
 border-radius:var(--radius);
-padding:16px;
-box-shadow:var(--shadow);
-border:1px solid rgba(255,255,255,0.04);
+margin-bottom:12px;
 }
-
-button{
-padding:10px 12px;
-border:none;
-border-radius:10px;
-cursor:pointer;
-background:var(--accent);
-color:white;
-font-weight:600;
-}
-
-button:hover{background:var(--accent-hover)}
 
 .row{display:flex;gap:10px;flex-wrap:wrap}
 .row>*{flex:1}
 
-.btnrow{display:flex;gap:10px;margin-top:10px;flex-wrap:wrap}
-
-.tooltip{
-position:relative;
+button{
+padding:12px;
+border:none;
+border-radius:10px;
+background:var(--accent);
+color:white;
+font-weight:bold;
 cursor:pointer;
 }
 
-.tooltip:hover::after{
-content:attr(data-tip);
-position:absolute;
-bottom:125%;
-left:50%;
-transform:translateX(-50%);
-background:#111;
-padding:6px 8px;
-border-radius:6px;
-font-size:11px;
-white-space:nowrap;
+select,input{
+padding:10px;
+border-radius:10px;
+border:none;
 }
 
-.standings-table{
-width:100%;
-border-collapse:collapse;
-}
+.small{font-size:12px;color:var(--muted)}
 
-.standings-table th,
-.standings-table td{
-padding:8px 6px;
-text-align:left;
-}
-
-.standings-table tr{
+.leader{
+display:flex;
+justify-content:space-between;
+padding:8px;
 border-bottom:1px solid var(--line);
 }
 
-.standings-table tr:first-child{
-background:rgba(111,45,189,0.15);
-font-weight:bold;
-}
-
-.history{
-display:flex;
-flex-direction:column;
-gap:8px;
-max-height:300px;
-overflow-y:auto;
-}
-
-.history-item{
+.stat{
+background:#111;
 padding:10px;
 border-radius:10px;
-background:#11131a;
-border:1px solid rgba(255,255,255,0.04);
+margin-top:8px;
+border:1px solid var(--line);
 }
 
-.muted{font-size:12px;color:var(--muted)}
+.tooltip{font-size:11px;color:var(--muted)}
 
-.king{
-text-align:center;
-padding:12px;
-background:rgba(111,45,189,0.15);
-border-radius:10px;
+details summary{
+cursor:pointer;
+font-weight:bold;
+margin-bottom:6px;
 }
-
-.rules{
-font-size:13px;
-line-height:1.5;
-}
-
 </style>
 </head>
 
 <body>
 
-<h1>🎱 House Pool Log <span id="badge"></span></h1>
-
-<div class="layout">
-
-<div class="grid">
+<h2>🎱 Pool Log</h2>
 
 <div class="card">
-<h2>📝 Log Game</h2>
 
 <div class="row">
 <select id="player1"></select>
 <select id="player2"></select>
 </div>
 
-<div class="btnrow">
+<div class="row">
 <button id="p1WinBtn"></button>
 <button id="p2WinBtn"></button>
 </div>
 
-<div class="btnrow">
-<select id="winType" class="tooltip" data-tip="How the game was won">
+<div class="row">
+<select id="winType">
 <option value="">Win Type</option>
 <option>8 Ball</option>
 <option>Opponent Scratch</option>
@@ -180,58 +106,39 @@ line-height:1.5;
 </select>
 </div>
 
-<div class="btnrow">
-<button id="rematchBtn" class="tooltip" data-tip="Swap players for next game">🔁 Rematch</button>
-<button id="modeBtn" class="tooltip" data-tip="Switch between House and APA rules">🏠 House Mode</button>
-<button id="kingModeBtn" class="tooltip" data-tip="Winner stays on table">👑 King: OFF</button>
+<div class="row">
+<button id="rematchBtn">🔁 Rematch</button>
+<button id="modeBtn">🏠 House Mode</button>
+<button id="kingModeBtn">👑 King OFF</button>
 </div>
 
-<div id="h2h" class="muted"></div>
+<div class="tooltip">Rematch swaps players instantly</div>
+<div class="tooltip">Mode enforces rules (APA requires win type)</div>
+<div class="tooltip">King Mode keeps winner on table</div>
+
+<div id="h2h" class="small"></div>
 
 </div>
 
 <div class="card">
-<h2>👥 Players</h2>
-
-<div class="row">
-<input id="newPlayer" placeholder="Enter player name">
+<input id="newPlayer" placeholder="Player name">
 <button id="addPlayerBtn">Add Player</button>
 </div>
 
-</div>
+<div class="card" id="king"></div>
+<div class="card" id="potn"></div>
+<div class="card" id="standings"></div>
+<div class="card" id="playerStats"></div>
+<div class="card" id="h2hFull"></div>
 
 <div class="card">
-<details open>
-<summary>🕙 Game History</summary>
-<div id="history" class="history"></div>
-<button id="deleteLastBtn">Undo Last Game</button>
-</details>
+<div id="history"></div>
+<button id="deleteLastBtn">Undo</button>
 </div>
 
-<div class="card rules" id="rules"></div>
-
-</div>
-
-<div class="grid">
-
-<div class="card">
-<h2>👑 King</h2>
-<div id="king" class="king"></div>
-</div>
-
-<div class="card">
-<h2>🏆 Standings</h2>
-<div id="standings"></div>
-</div>
-
-</div>
-
-</div>
+<div class="card" id="rules"></div>
 
 <script>
-
-const VERSION="5.1.0"
-document.getElementById("badge").textContent="v"+VERSION
 
 const sb=supabase.createClient(
 "https://wybycecwkvrukcfoqgpa.supabase.co",
@@ -243,7 +150,27 @@ let mode="house"
 let kingMode=false
 const K=20
 
+async function injectManualGames(){
+let date=new Date()
+date.setDate(date.getDate()-((date.getDay()+4)%7)) // last Wednesday
+
+let {data}=await sb.from("games")
+.select("*")
+.eq("player1","Kdub")
+.eq("player2","Stuffy")
+.eq("winner","Kdub")
+
+if(data.length>=2)return
+
+await sb.from("games").insert([
+{player1:"Kdub",player2:"Stuffy",winner:"Kdub",date},
+{player1:"Kdub",player2:"Stuffy",winner:"Kdub",date}
+])
+}
+
 async function loadData(){
+
+await injectManualGames()
 
 const {data:p}=await sb.from("players").select("name").order("name")
 players=p?.map(x=>x.name)||[]
@@ -251,49 +178,18 @@ players=p?.map(x=>x.name)||[]
 const {data:g}=await sb.from("games").select("*").order("date",{ascending:false})
 games=g||[]
 
-await seedGames()
-
 renderAll()
 }
 
-async function seedGames(){
-
-if(games.some(g=>g.seed_tag==="kdub_seed")) return
-
-let d=new Date()
-d.setDate(d.getDate() - ((d.getDay()+4)%7))
-
-for(let i=0;i<2;i++){
-await sb.from("games").insert({
-player1:"Kdub",
-player2:"Stuffy",
-winner:"Kdub",
-date:d.toISOString(),
-seed_tag:"kdub_seed"
-})
-}
-
-const {data:g}=await sb.from("games").select("*").order("date",{ascending:false})
-games=g||[]
-}
-
 function renderPlayers(){
-
-const p1=player1.value
-const p2=player2.value
-
 player1.innerHTML=players.map(p=>`<option>${p}</option>`).join("")
 player2.innerHTML=players.map(p=>`<option>${p}</option>`).join("")
-
-if(players.includes(p1)) player1.value=p1
-if(players.includes(p2)) player2.value=p2
-
 updateButtons()
 }
 
 function updateButtons(){
-p1WinBtn.textContent=(player1.value||"Player 1")+" Won"
-p2WinBtn.textContent=(player2.value||"Player 2")+" Won"
+p1WinBtn.textContent=(player1.value||"Player")+" Won"
+p2WinBtn.textContent=(player2.value||"Player")+" Won"
 renderH2H()
 }
 
@@ -301,24 +197,38 @@ player1.onchange=updateButtons
 player2.onchange=updateButtons
 
 function renderH2H(){
-
 let p1=player1.value,p2=player2.value
 let w1=0,w2=0
-
 games.forEach(g=>{
 if((g.player1===p1&&g.player2===p2)||(g.player1===p2&&g.player2===p1)){
 if(g.winner===p1)w1++
 if(g.winner===p2)w2++
 }
 })
-
 h2h.innerHTML=`${p1} leads ${p2} ${w1}-${w2}`
 }
 
-async function logWin(which){
+function renderH2HFull(){
+let map={}
+games.forEach(g=>{
+let key=[g.player1,g.player2].sort().join("-")
+if(!map[key])map[key]={p1:g.player1,p2:g.player2,w1:0,w2:0}
 
+if(g.winner===map[key].p1)map[key].w1++
+else map[key].w2++
+})
+
+h2hFull.innerHTML="<b>Head to Head</b><br>"+Object.values(map)
+.sort((a,b)=>(b.w1+b.w2)-(a.w1+a.w2))
+.map(m=>`${m.p1} ${m.w1}-${m.w2} ${m.p2}`)
+.join("<br>")
+}
+
+async function logWin(which){
 let p1=player1.value
 let p2=player2.value
+if(p1===p2)return
+
 let winner=which===1?p1:p2
 let loser=which===1?p2:p1
 let type=winType.value
@@ -328,12 +238,7 @@ if(!type){alert("Select win type");return}
 if(type==="Scratch on 8") winner=loser
 }
 
-await sb.from("games").insert({
-player1:p1,
-player2:p2,
-winner,
-win_type:type
-})
+await sb.from("games").insert({player1:p1,player2:p2,winner,win_type:type})
 
 if(kingMode){
 player1.value=winner
@@ -342,109 +247,137 @@ player1.value=winner
 loadData()
 }
 
+addPlayerBtn.onclick=async()=>{
+let name=newPlayer.value.trim()
+if(!name)return
+await sb.from("players").insert({name})
+newPlayer.value=""
+loadData()
+}
+
+deleteLastBtn.onclick=async()=>{
+if(!games.length)return
+await sb.from("games").delete().eq("id",games[0].id)
+loadData()
+}
+
 function computeStats(){
-
 let stats={},elo={}
-
 games.slice().reverse().forEach(g=>{
-
 [g.player1,g.player2].forEach(p=>{
-if(!stats[p])stats[p]={w:0,l:0}
+if(!stats[p])stats[p]={w:0,l:0,history:[]}
 if(!elo[p])elo[p]=1000
 })
-
 let w=g.winner
 let l=w===g.player1?g.player2:g.player1
-
 stats[w].w++
 stats[l].l++
+stats[w].history.push(1)
+stats[l].history.push(0)
 
 let exp=1/(1+Math.pow(10,(elo[l]-elo[w])/400))
 elo[w]+=K*(1-exp)
 elo[l]+=K*(0-(1-exp))
 })
-
 return {stats,elo}
 }
 
 function renderStandings(){
-
-const {stats,elo}=computeStats()
-
-const list=Object.entries(stats).sort((a,b)=>elo[b[0]]-elo[a[0]])
-
-standings.innerHTML=`
-<table class="standings-table">
-<tr><th>#</th><th>Player</th><th>Record</th><th>ELO</th></tr>
-${list.map(([p,s],i)=>`
-<tr>
-<td>${i+1}</td>
-<td><b>${p}</b></td>
-<td>${s.w}-${s.l}</td>
-<td>${Math.round(elo[p])}</td>
-</tr>
-`).join("")}
-</table>
-`
-}
-
-function renderKing(){
-
-if(!games.length){
-king.innerHTML="No games yet"
-return
-}
-
-let best=0,cur=0,last=null
-
-games.slice().reverse().forEach(g=>{
-if(g.winner===last){cur++}
-else{cur=1;last=g.winner}
-best=Math.max(best,cur)
-})
-
-king.innerHTML=`
-👑 <b>${games[0].winner}</b><br>
-🔥 Streak: ${cur}<br>
-🏆 Best: ${best}
-`
-}
-
-function renderHistory(){
-
-history.innerHTML=games.map(g=>`
-<div class="history-item">
-<div class="muted">${new Date(g.date).toLocaleString()}</div>
-<b>${g.winner}</b> beat ${g.winner===g.player1?g.player2:g.player1}
-<br><span class="muted">${g.win_type||"quick win"}</span>
+let {stats,elo}=computeStats()
+standings.innerHTML=Object.entries(stats)
+.sort((a,b)=>elo[b[0]]-elo[a[0]])
+.map(([p,s],i)=>`
+<div class="leader">
+<div>${i+1}. ${p} (${s.w}-${s.l})</div>
+<div>${Math.round(elo[p])}</div>
 </div>
 `).join("")
 }
 
+function renderKing(){
+if(!games.length){king.innerHTML="No games";return}
+
+let best=0,cur=0,last=null
+games.slice().reverse().forEach(g=>{
+if(g.winner===last){cur++}else{cur=1;last=g.winner}
+best=Math.max(best,cur)
+})
+
+king.innerHTML=`👑 Current: ${games[0].winner}<br>🔥 Streak: ${cur}<br>🏆 Best: ${best}`
+}
+
+function renderPlayerStats(){
+let {stats,elo}=computeStats()
+playerStats.innerHTML=Object.entries(stats).map(([p,s])=>{
+let total=s.w+s.l
+let pct=((s.w/total)*100||0).toFixed(1)
+let last10=s.history.slice(-10)
+return `
+<div class="stat">
+<b>${p}</b><br>
+Win% ${pct}% | ELO ${Math.round(elo[p])}<br>
+${last10.map(x=>x?"🟩":"⬛").join("")}
+</div>`
+}).join("")
+}
+
+function renderPOTN(){
+let recent=games.slice(0,20)
+let score={}
+recent.forEach(g=>{
+if(!score[g.winner])score[g.winner]=0
+score[g.winner]++
+})
+let best=Object.entries(score).sort((a,b)=>b[1]-a[1])[0]
+potn.innerHTML=best?`🏆 ${best[0]} (${best[1]} wins)`:""
+}
+
+function renderHistory(){
+history.innerHTML=games.map(g=>`
+<div class="small">${g.winner} beat ${g.winner===g.player1?g.player2:g.player1} (${g.win_type||"quick"})</div>
+`).join("")
+}
+
 function renderRules(){
-
 rules.innerHTML=`
-<h3>📜 Rules</h3>
 
-<b>🏠 House Rules (Default)</b><br>
-Games are played casually. Shots do not need to be called and any ball that goes in counts. 
-The game is won by legally pocketing the 8 ball. Scratching on the 8 ball results in a loss. 
-Pocketing the 8 ball early results in a loss. Games are intended to be fast and friendly.<br><br>
+<details open>
+<summary>🏠 House Rules</summary>
+<ul>
+<li>Table is open after the break.</li>
+<li>No call shots — slop counts.</li>
+<li>First player to legally pocket the 8 ball wins.</li>
+<li>Scratching on the 8 ball results in a loss.</li>
+<li>Sinking the 8 ball early results in a loss.</li>
+<li>Games are fast and casual.</li>
+</ul>
+</details>
 
-<b>🎱 APA 8-Ball Rules</b><br>
-Shots must be called. Players must strike their assigned group first. 
-The 8 ball can only be attempted after clearing all group balls. 
-Scratching on the 8 ball results in an automatic loss. 
-Pocketing the 8 ball early results in a loss. Defensive shots are allowed.
+<details>
+<summary>🎱 APA Rules</summary>
+<ul>
+<li>Table is open after the break.</li>
+<li>Players must call intended shots.</li>
+<li>Must hit your group first.</li>
+<li>Clear your group before attempting the 8.</li>
+<li>Scratch on the 8 is a loss.</li>
+<li>Early 8 is a loss.</li>
+<li>Defensive shots are allowed.</li>
+</ul>
+</details>
+
 `
 }
 
 function renderAll(){
 renderPlayers()
 renderStandings()
-renderHistory()
 renderKing()
+renderPlayerStats()
+renderPOTN()
+renderHistory()
 renderRules()
+renderH2HFull()
 updateButtons()
 }
 
@@ -455,7 +388,7 @@ modeBtn.textContent=mode==="house"?"🏠 House Mode":"🎱 APA Mode"
 
 kingModeBtn.onclick=()=>{
 kingMode=!kingMode
-kingModeBtn.textContent=`👑 King: ${kingMode?"ON":"OFF"}`
+kingModeBtn.textContent=`👑 King ${kingMode?"ON":"OFF"}`
 }
 
 rematchBtn.onclick=()=>{
