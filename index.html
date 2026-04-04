@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>Table Kings</title>
 
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
@@ -27,49 +28,32 @@ max-width:900px;
 margin:auto;
 }
 
-/* HEADER */
+/* 🔥 HEADER / BRANDING */
 .header{
 display:flex;
 align-items:center;
 gap:12px;
-margin-bottom:10px;
+margin-bottom:14px;
 }
 
 .header img{
 width:60px;
+height:60px;
+object-fit:contain;
 }
 
 .header h1{
 margin:0;
 font-size:24px;
+letter-spacing:1px;
 }
 
 .sub{
 font-size:12px;
 color:var(--muted);
+margin-top:-4px;
 }
 
-/* KING BANNER */
-.king-banner{
-position:sticky;
-top:0;
-z-index:1000;
-background:#1a1a25;
-border:1px solid var(--line);
-padding:10px;
-border-radius:12px;
-margin-bottom:12px;
-display:flex;
-justify-content:space-between;
-box-shadow:0 4px 12px rgba(0,0,0,0.4);
-}
-
-.king-banner span{
-color:#facc15;
-font-weight:bold;
-}
-
-/* CARDS */
 .card{
 background:var(--card);
 padding:14px;
@@ -81,25 +65,13 @@ margin-bottom:12px;
 .row>*{flex:1}
 
 button{
-padding:14px;
+padding:12px;
 border:none;
 border-radius:10px;
 background:var(--accent);
 color:white;
 font-weight:bold;
-font-size:16px;
 cursor:pointer;
-}
-
-/* WIN ANIMATION */
-@keyframes glow{
-0%{transform:scale(1)}
-50%{transform:scale(1.05);box-shadow:0 0 14px #6f2dbd}
-100%{transform:scale(1)}
-}
-
-.win-animate{
-animation:glow .35s ease;
 }
 
 select,input{
@@ -137,19 +109,13 @@ margin-bottom:6px;
 
 <body>
 
-<!-- HEADER -->
+<!-- 🔥 TABLE KINGS HEADER -->
 <div class="header">
-<img src="raven.png">
+<img src="raven.png" alt="Table Kings Raven">
 <div>
 <h1>👑 Table Kings</h1>
 <div class="sub">King of the Table. Earn it.</div>
 </div>
-</div>
-
-<!-- KING BANNER -->
-<div class="king-banner">
-<div>👑 King: <span id="kingName">-</span></div>
-<div>🔥 Streak: <span id="kingStreak">0</span></div>
 </div>
 
 <div class="card">
@@ -216,7 +182,28 @@ let mode="house"
 let kingMode=false
 const K=20
 
+async function injectManualGames(){
+let date=new Date()
+date.setDate(date.getDate()-((date.getDay()+4)%7))
+
+let {data}=await sb.from("games")
+.select("*")
+.eq("player1","Kdub")
+.eq("player2","Stuffy")
+.eq("winner","Kdub")
+
+if(data.length>=2)return
+
+await sb.from("games").insert([
+{player1:"Kdub",player2:"Stuffy",winner:"Kdub",date},
+{player1:"Kdub",player2:"Stuffy",winner:"Kdub",date}
+])
+}
+
 async function loadData(){
+
+await injectManualGames()
+
 const {data:p}=await sb.from("players").select("name").order("name")
 players=p?.map(x=>x.name)||[]
 
@@ -238,6 +225,9 @@ p2WinBtn.textContent=(player2.value||"Player")+" Won"
 renderH2H()
 }
 
+player1.onchange=updateButtons
+player2.onchange=updateButtons
+
 function renderH2H(){
 let p1=player1.value,p2=player2.value
 let w1=0,w2=0
@@ -250,30 +240,20 @@ if(g.winner===p2)w2++
 h2h.innerHTML=`${p1} leads ${p2} ${w1}-${w2}`
 }
 
-function renderKing(){
-if(!games.length){
-kingName.textContent="-"
-kingStreak.textContent="0"
-return
-}
+function renderH2HFull(){
+let map={}
+games.forEach(g=>{
+let key=[g.player1,g.player2].sort().join("-")
+if(!map[key])map[key]={p1:g.player1,p2:g.player2,w1:0,w2:0}
 
-let best=0,cur=0,last=null
-games.slice().reverse().forEach(g=>{
-if(g.winner===last){cur++}else{cur=1;last=g.winner}
-best=Math.max(best,cur)
+if(g.winner===map[key].p1)map[key].w1++
+else map[key].w2++
 })
 
-let current=games[0].winner
-
-kingName.textContent=current
-kingStreak.textContent=cur
-
-king.innerHTML=`👑 Current: ${current}<br>🔥 Streak: ${cur}<br>🏆 Best: ${best}`
-}
-
-function animateWin(btn){
-btn.classList.add("win-animate")
-setTimeout(()=>btn.classList.remove("win-animate"),350)
+h2hFull.innerHTML="<b>Head to Head</b><br>"+Object.values(map)
+.sort((a,b)=>(b.w1+b.w2)-(a.w1+a.w2))
+.map(m=>`${m.p1} ${m.w1}-${m.w2} ${m.p2}`)
+.join("<br>")
 }
 
 async function logWin(which){
@@ -299,9 +279,6 @@ player1.value=winner
 loadData()
 }
 
-p1WinBtn.onclick=()=>{animateWin(p1WinBtn);logWin(1)}
-p2WinBtn.onclick=()=>{animateWin(p2WinBtn);logWin(2)}
-
 addPlayerBtn.onclick=async()=>{
 let name=newPlayer.value.trim()
 if(!name)return
@@ -316,22 +293,121 @@ await sb.from("games").delete().eq("id",games[0].id)
 loadData()
 }
 
+function computeStats(){
+let stats={},elo={}
+games.slice().reverse().forEach(g=>{
+[g.player1,g.player2].forEach(p=>{
+if(!stats[p])stats[p]={w:0,l:0,history:[]}
+if(!elo[p])elo[p]=1000
+})
+let w=g.winner
+let l=w===g.player1?g.player2:g.player1
+stats[w].w++
+stats[l].l++
+stats[w].history.push(1)
+stats[l].history.push(0)
+
+let exp=1/(1+Math.pow(10,(elo[l]-elo[w])/400))
+elo[w]+=K*(1-exp)
+elo[l]+=K*(0-(1-exp))
+})
+return {stats,elo}
+}
+
 function renderStandings(){
-let stats={}
-games.forEach(g=>{
-if(!stats[g.winner])stats[g.winner]=0
-stats[g.winner]++
+let {stats,elo}=computeStats()
+standings.innerHTML=Object.entries(stats)
+.sort((a,b)=>elo[b[0]]-elo[a[0]])
+.map(([p,s],i)=>`
+<div class="leader">
+<div>${i+1}. ${p} (${s.w}-${s.l})</div>
+<div>${Math.round(elo[p])}</div>
+</div>
+`).join("")
+}
+
+function renderKing(){
+if(!games.length){king.innerHTML="No games";return}
+
+let best=0,cur=0,last=null
+games.slice().reverse().forEach(g=>{
+if(g.winner===last){cur++}else{cur=1;last=g.winner}
+best=Math.max(best,cur)
 })
 
-standings.innerHTML=Object.entries(stats)
-.sort((a,b)=>b[1]-a[1])
-.map(([p,w],i)=>`<div class="leader">${i+1}. ${p} (${w})</div>`).join("")
+king.innerHTML=`👑 Current: ${games[0].winner}<br>🔥 Streak: ${cur}<br>🏆 Best: ${best}`
+}
+
+function renderPlayerStats(){
+let {stats,elo}=computeStats()
+playerStats.innerHTML=Object.entries(stats).map(([p,s])=>{
+let total=s.w+s.l
+let pct=((s.w/total)*100||0).toFixed(1)
+let last10=s.history.slice(-10)
+return `
+<div class="stat">
+<b>${p}</b><br>
+Win% ${pct}% | ELO ${Math.round(elo[p])}<br>
+${last10.map(x=>x?"🟩":"⬛").join("")}
+</div>`
+}).join("")
+}
+
+function renderPOTN(){
+let recent=games.slice(0,20)
+let score={}
+recent.forEach(g=>{
+if(!score[g.winner])score[g.winner]=0
+score[g.winner]++
+})
+let best=Object.entries(score).sort((a,b)=>b[1]-a[1])[0]
+potn.innerHTML=best?`🏆 ${best[0]} (${best[1]} wins)`:""
+}
+
+function renderHistory(){
+history.innerHTML=games.map(g=>`
+<div class="small">${g.winner} beat ${g.winner===g.player1?g.player2:g.player1} (${g.win_type||"quick"})</div>
+`).join("")
+}
+
+function renderRules(){
+rules.innerHTML=`
+<details open>
+<summary>🏠 House Rules</summary>
+<ul>
+<li>Table is open after the break.</li>
+<li>No call shots — slop counts.</li>
+<li>First player to legally pocket the 8 ball wins.</li>
+<li>Scratching on the 8 ball results in a loss.</li>
+<li>Sinking the 8 ball early results in a loss.</li>
+<li>Games are fast and casual.</li>
+</ul>
+</details>
+
+<details>
+<summary>🎱 APA Rules</summary>
+<ul>
+<li>Table is open after the break.</li>
+<li>Players must call intended shots.</li>
+<li>Must hit your group first.</li>
+<li>Clear your group before attempting the 8.</li>
+<li>Scratch on the 8 is a loss.</li>
+<li>Early 8 is a loss.</li>
+<li>Defensive shots are allowed.</li>
+</ul>
+</details>
+`
 }
 
 function renderAll(){
 renderPlayers()
 renderStandings()
 renderKing()
+renderPlayerStats()
+renderPOTN()
+renderHistory()
+renderRules()
+renderH2HFull()
 updateButtons()
 }
 
@@ -344,6 +420,9 @@ kingModeBtn.onclick=()=>{
 kingMode=!kingMode
 kingModeBtn.textContent=`👑 King ${kingMode?"ON":"OFF"}`
 }
+
+p1WinBtn.onclick=()=>logWin(1)
+p2WinBtn.onclick=()=>logWin(2)
 
 loadData()
 
