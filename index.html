@@ -40,7 +40,8 @@ html,body{
 body{
   max-width:1100px;
   margin:auto;
-  padding:14px;
+  padding:12px;
+  padding-bottom:90px;
 }
 
 h1,h2,h3{margin:0}
@@ -48,16 +49,19 @@ button,input,select{font:inherit}
 
 button{
   border:none;
-  border-radius:12px;
-  padding:12px 14px;
+  border-radius:14px;
+  padding:13px 14px;
   cursor:pointer;
   background:var(--accent);
   color:white;
-  font-weight:800;
+  font-weight:900;
   transition:.15s ease;
+  min-height:48px;
 }
+
 button:hover{transform:translateY(-1px)}
 button:active{transform:translateY(0)}
+
 button.secondary{background:#283042}
 button.ghost{
   background:transparent;
@@ -69,9 +73,9 @@ button.danger:hover{background:var(--dangerDark)}
 
 input,select{
   width:100%;
-  min-height:46px;
+  min-height:48px;
   border:none;
-  border-radius:12px;
+  border-radius:14px;
   padding:12px 14px;
   background:#f3f4f6;
   color:#111827;
@@ -93,25 +97,25 @@ label{
   position:sticky;
   top:0;
   z-index:20;
-  padding:10px 0 14px;
-  background:linear-gradient(180deg, rgba(8,9,14,.96), rgba(8,9,14,.84));
+  padding:8px 0 10px;
+  background:linear-gradient(180deg, rgba(8,9,14,.98), rgba(8,9,14,.86));
   backdrop-filter:blur(12px);
 }
 
 .brand{
   display:flex;
   align-items:center;
-  gap:16px;
+  gap:12px;
   border:1px solid var(--line);
   border-radius:22px;
-  padding:16px 18px;
+  padding:12px;
   background:linear-gradient(135deg,#111422,#1b1034 70%);
   box-shadow:var(--shadow);
 }
 
 .brand img{
-  width:84px;
-  height:84px;
+  width:62px;
+  height:62px;
   object-fit:contain;
   border-radius:16px;
   background:#0f1119;
@@ -119,27 +123,27 @@ label{
 }
 
 .brandTitle{
-  font-size:clamp(30px,5vw,52px);
-  font-weight:900;
-  letter-spacing:.5px;
+  font-size:clamp(27px,8vw,48px);
+  font-weight:950;
+  letter-spacing:.2px;
   line-height:1;
 }
 
 .brandSub{
-  margin-top:6px;
-  font-size:clamp(13px,2vw,18px);
+  margin-top:5px;
+  font-size:clamp(13px,3.8vw,18px);
   color:#d1d5db;
 }
 
 .brandBadge{
   display:inline-block;
-  margin-top:10px;
+  margin-top:8px;
   padding:6px 10px;
   border-radius:999px;
   background:linear-gradient(90deg,var(--accent),var(--accent2));
   color:#f5e8ff;
-  font-size:12px;
-  font-weight:800;
+  font-size:11px;
+  font-weight:900;
 }
 
 .grid{
@@ -147,6 +151,7 @@ label{
   grid-template-columns:1fr;
   gap:14px;
 }
+
 @media(min-width:980px){
   .grid.two{
     grid-template-columns:1.22fr .88fr;
@@ -157,14 +162,14 @@ label{
   background:linear-gradient(180deg,var(--card),var(--card2));
   border:1px solid var(--line);
   border-radius:18px;
-  padding:16px;
+  padding:15px;
   box-shadow:var(--shadow);
   margin-bottom:14px;
 }
 
 .cardTitle{
-  font-size:21px;
-  font-weight:900;
+  font-size:20px;
+  font-weight:950;
   margin-bottom:12px;
 }
 
@@ -173,6 +178,7 @@ label{
   grid-template-columns:1fr;
   gap:10px;
 }
+
 @media(min-width:720px){
   .row.two{grid-template-columns:1fr 1fr}
   .row.three{grid-template-columns:1fr 1fr 1fr}
@@ -185,12 +191,16 @@ label{
   gap:10px;
 }
 
+.toolbar button{
+  flex:1 1 auto;
+}
+
 .modeBtn.active{
   box-shadow:0 0 0 2px rgba(168,85,247,.35) inset, 0 0 18px rgba(124,58,237,.35);
 }
 
 .winBtn{
-  min-height:54px;
+  min-height:60px;
   font-size:17px;
 }
 
@@ -205,44 +215,83 @@ label{
   grid-template-columns:1fr;
   gap:10px;
 }
+
 @media(min-width:700px){
   .kpi{grid-template-columns:1fr 1fr 1fr}
 }
+
 .tile{
   border:1px solid var(--line);
-  border-radius:14px;
+  border-radius:16px;
   padding:14px;
   background:#111522;
 }
+
 .tile .big{
   margin-top:4px;
-  font-size:24px;
-  font-weight:900;
+  font-size:23px;
+  font-weight:950;
+}
+
+.mobileScoreboard{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  margin-bottom:14px;
+}
+
+.mobileScoreboard .tile{
+  min-height:86px;
+}
+
+.mobileScoreboard .wide{
+  grid-column:1 / -1;
+}
+
+@media(min-width:900px){
+  .mobileScoreboard{
+    grid-template-columns:1fr 1fr 1fr;
+  }
+  .mobileScoreboard .wide{
+    grid-column:auto;
+  }
 }
 
 .leader{
   display:grid;
-  grid-template-columns:42px 1fr auto;
+  grid-template-columns:38px 1fr auto;
   align-items:center;
-  gap:10px;
-  padding:12px 6px;
+  gap:9px;
+  padding:12px 5px;
   border-bottom:1px solid var(--line);
 }
+
 .rank{
-  width:34px;
-  height:34px;
+  width:32px;
+  height:32px;
   border-radius:999px;
   display:flex;
   align-items:center;
   justify-content:center;
-  font-weight:900;
+  font-weight:950;
   background:#111827;
   border:1px solid var(--line);
 }
 
+.compactLeader{
+  display:grid;
+  grid-template-columns:32px 1fr auto;
+  align-items:center;
+  gap:8px;
+  padding:10px 0;
+  border-bottom:1px solid var(--line);
+}
+
+.compactLeader:last-child{border-bottom:none}
+
 .statCard{
   border:1px solid var(--line);
-  border-radius:14px;
+  border-radius:16px;
   padding:12px;
   background:#111522;
   margin-top:10px;
@@ -258,16 +307,33 @@ label{
 
 .historyRow{
   border:1px solid var(--line);
-  border-radius:14px;
+  border-radius:16px;
   padding:12px;
   background:#10141f;
 }
 
 .historyTop{
   display:grid;
-  grid-template-columns:auto 1fr auto;
+  grid-template-columns:auto 1fr;
   gap:10px;
   align-items:start;
+}
+
+.historyDelete{
+  grid-column:1 / -1;
+}
+
+.historyDelete button{
+  width:100%;
+}
+
+@media(min-width:640px){
+  .historyTop{
+    grid-template-columns:auto 1fr auto;
+  }
+  .historyDelete{
+    grid-column:auto;
+  }
 }
 
 .pill{
@@ -275,17 +341,18 @@ label{
   padding:4px 8px;
   border-radius:999px;
   font-size:11px;
-  font-weight:800;
+  font-weight:900;
   border:1px solid #334155;
   margin-right:6px;
 }
+
 .pill.house{background:#1f2937;color:#f3f4f6}
 .pill.apa{background:#2e1065;color:#f5d0fe}
 .pill.win{background:#052e16;color:#bbf7d0}
 
 .listBox{
   border:1px solid var(--line);
-  border-radius:14px;
+  border-radius:16px;
   background:#10141f;
   padding:10px;
   max-height:240px;
@@ -300,6 +367,7 @@ label{
   padding:10px 8px;
   border-bottom:1px solid var(--line);
 }
+
 .playerRow:last-child{border-bottom:none}
 
 .checkboxRow{
@@ -310,17 +378,62 @@ label{
   margin-top:8px;
 }
 
+.checkboxRow input{
+  width:auto;
+  min-height:auto;
+}
+
 details{
   border:1px solid var(--line);
-  border-radius:14px;
-  padding:10px 12px;
+  border-radius:16px;
+  padding:0;
   background:#10141f;
+  overflow:hidden;
 }
+
 details + details{margin-top:10px}
+
 summary{
   cursor:pointer;
-  font-weight:800;
+  font-weight:950;
+  list-style:none;
+  padding:14px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
 }
+
+summary::-webkit-details-marker{display:none}
+
+summary::after{
+  content:"▾";
+  color:var(--muted);
+  transition:.15s ease;
+}
+
+details[open] summary::after{
+  transform:rotate(180deg);
+}
+
+.detailsBody{
+  border-top:1px solid var(--line);
+  padding:14px;
+}
+
+.collapsibleCard{
+  padding:0;
+}
+
+.collapsibleCard summary{
+  background:linear-gradient(180deg,var(--card),var(--card2));
+  font-size:20px;
+}
+
+.collapsibleCard .detailsBody{
+  background:linear-gradient(180deg,var(--card),var(--card2));
+}
+
 ul{
   margin:10px 0 0 18px;
   padding:0;
@@ -330,8 +443,77 @@ ul{
   color:var(--muted);
   padding:8px 2px;
 }
+
+.mobileQuickNav{
+  position:sticky;
+  top:98px;
+  z-index:18;
+  display:flex;
+  gap:8px;
+  overflow:auto;
+  padding:6px 0 10px;
+  background:linear-gradient(180deg, rgba(8,9,14,.92), rgba(8,9,14,.70));
+  backdrop-filter:blur(10px);
+  margin-bottom:4px;
+}
+
+.mobileQuickNav a{
+  flex:0 0 auto;
+  color:var(--text);
+  text-decoration:none;
+  border:1px solid var(--line);
+  background:#111522;
+  border-radius:999px;
+  padding:9px 12px;
+  font-size:12px;
+  font-weight:900;
+}
+
+@media(min-width:980px){
+  .mobileQuickNav{
+    position:static;
+    background:transparent;
+    backdrop-filter:none;
+  }
+}
+
+.mobilePrimaryStats{
+  display:block;
+}
+
+.desktopOnly{
+  display:none;
+}
+
+@media(min-width:900px){
+  .desktopOnly{display:block}
+}
+
+.statusBar{
+  position:fixed;
+  left:10px;
+  right:10px;
+  bottom:10px;
+  z-index:40;
+  border:1px solid var(--line);
+  border-radius:18px;
+  padding:10px 12px;
+  background:rgba(16,20,31,.94);
+  backdrop-filter:blur(12px);
+  box-shadow:var(--shadow);
+}
+
+@media(min-width:900px){
+  .statusBar{
+    position:static;
+    margin-top:8px;
+    box-shadow:none;
+  }
+  body{padding-bottom:12px}
+}
 </style>
 </head>
+
 <body>
 
 <div class="stickyHeader">
@@ -340,14 +522,24 @@ ul{
     <div>
       <div class="brandTitle">👑 Table Kings</div>
       <div class="brandSub">King of the Table. Earn it.</div>
-      <div class="brandBadge">Pool log • standings • manual edits • cleanup</div>
+      <div class="brandBadge">Mobile-first pool tracker</div>
     </div>
   </div>
 </div>
 
+<div class="mobileQuickNav">
+  <a href="#logCard">Log</a>
+  <a href="#mobileStats">Stats</a>
+  <a href="#king">King</a>
+  <a href="#standings">Standings</a>
+  <a href="#historyWrap">History</a>
+  <a href="#manualWrap">Backfill</a>
+  <a href="#playersWrap">Players</a>
+</div>
+
 <div class="grid two">
   <div>
-    <div class="card">
+    <div class="card" id="logCard">
       <div class="cardTitle">Log a Match</div>
 
       <div class="row two">
@@ -401,109 +593,117 @@ ul{
       <div class="note">King mode keeps the winner in Player 1 after logging.</div>
 
       <div id="h2h" class="small" style="margin-top:10px;"></div>
-      <div id="status" class="small" style="margin-top:8px;"></div>
+
+      <div class="statusBar">
+        <div id="status" class="small"></div>
+      </div>
     </div>
 
-    <div class="card">
-      <div class="cardTitle">Manual Entry / Backfill</div>
+    <div class="card mobilePrimaryStats" id="mobileStats"></div>
 
-      <div class="row four">
-        <div>
-          <label for="manualP1">Player 1</label>
-          <select id="manualP1"></select>
+    <details class="card collapsibleCard" id="manualWrap">
+      <summary>Manual Entry / Backfill</summary>
+      <div class="detailsBody">
+        <div class="row four">
+          <div>
+            <label for="manualP1">Player 1</label>
+            <select id="manualP1"></select>
+          </div>
+          <div>
+            <label for="manualP2">Player 2</label>
+            <select id="manualP2"></select>
+          </div>
+          <div>
+            <label for="manualWinner">Winner</label>
+            <select id="manualWinner"></select>
+          </div>
+          <div>
+            <label for="manualDate">Past Date/Time</label>
+            <input id="manualDate" type="datetime-local">
+          </div>
         </div>
-        <div>
-          <label for="manualP2">Player 2</label>
-          <select id="manualP2"></select>
+
+        <div class="row three" style="margin-top:10px;">
+          <div>
+            <label for="manualWinType">Win Type</label>
+            <select id="manualWinType">
+              <option value="">Quick / not specified</option>
+              <option value="8 Ball">8 Ball</option>
+              <option value="Opponent Scratch">Opponent Scratch</option>
+              <option value="Opponent Early 8">Opponent Early 8</option>
+              <option value="Scratch on 8">Scratch on 8</option>
+            </select>
+          </div>
+          <div>
+            <label for="manualMode">Mode</label>
+            <select id="manualMode">
+              <option value="house">House</option>
+              <option value="apa">APA</option>
+            </select>
+          </div>
+          <div>
+            <label>&nbsp;</label>
+            <button id="addManualGameBtn" style="width:100%;">Add Manual Game</button>
+          </div>
         </div>
-        <div>
-          <label for="manualWinner">Winner</label>
-          <select id="manualWinner"></select>
-        </div>
-        <div>
-          <label for="manualDate">Past Date/Time</label>
-          <input id="manualDate" type="datetime-local">
-        </div>
+
+        <div class="note">Use this for missed games from prior dates.</div>
       </div>
+    </details>
 
-      <div class="row three" style="margin-top:10px;">
-        <div>
-          <label for="manualWinType">Win Type</label>
-          <select id="manualWinType">
-            <option value="">Quick / not specified</option>
-            <option value="8 Ball">8 Ball</option>
-            <option value="Opponent Scratch">Opponent Scratch</option>
-            <option value="Opponent Early 8">Opponent Early 8</option>
-            <option value="Scratch on 8">Scratch on 8</option>
-          </select>
+    <details class="card collapsibleCard" id="historyWrap">
+      <summary>Game History</summary>
+      <div class="detailsBody">
+        <div class="toolbar" style="margin-bottom:10px;">
+          <button id="deleteSelectedGamesBtn" class="danger">Delete Selected</button>
+          <button id="deleteLastBtn" class="secondary">Undo Last</button>
+          <button id="clearSelectionsBtn" class="ghost">Clear</button>
         </div>
-        <div>
-          <label for="manualMode">Mode</label>
-          <select id="manualMode">
-            <option value="house">House</option>
-            <option value="apa">APA</option>
-          </select>
-        </div>
-        <div>
-          <label>&nbsp;</label>
-          <button id="addManualGameBtn">Add Manual Game</button>
-        </div>
+
+        <div id="history" class="historyList"></div>
       </div>
-
-      <div class="note">Use this for missed games from prior dates, like Kee’s two 8-ball wins last Thursday.</div>
-    </div>
-
-    <div class="card">
-      <div class="cardTitle">Game History</div>
-
-      <div class="toolbar" style="margin-bottom:10px;">
-        <button id="deleteSelectedGamesBtn" class="danger">Delete Selected Games</button>
-        <button id="deleteLastBtn" class="secondary">Undo Last Logged Game</button>
-        <button id="clearSelectionsBtn" class="ghost">Clear Selections</button>
-      </div>
-
-      <div id="history" class="historyList"></div>
-    </div>
+    </details>
 
     <div class="card" id="rules"></div>
   </div>
 
   <div>
-    <div class="card">
-      <div class="cardTitle">Player Management</div>
-
-      <div class="row two">
-        <div>
-          <label for="newPlayer">Add Player</label>
-          <input id="newPlayer" placeholder="Player name">
+    <details class="card collapsibleCard" id="playersWrap">
+      <summary>Player Management</summary>
+      <div class="detailsBody">
+        <div class="row two">
+          <div>
+            <label for="newPlayer">Add Player</label>
+            <input id="newPlayer" placeholder="Player name">
+          </div>
+          <div style="display:flex;align-items:end;">
+            <button id="addPlayerBtn" style="width:100%;">Add Player</button>
+          </div>
         </div>
-        <div style="display:flex;align-items:end;">
-          <button id="addPlayerBtn" style="width:100%;">Add Player</button>
+
+        <div class="row two" style="margin-top:10px;">
+          <div>
+            <label for="deletePlayerSelect">Delete Player / Cleanup Orphan</label>
+            <select id="deletePlayerSelect"></select>
+          </div>
+          <div style="display:flex;align-items:end;">
+            <button id="deletePlayerBtn" class="danger" style="width:100%;">Delete Selected Player</button>
+          </div>
+        </div>
+
+        <label class="checkboxRow">
+          <input id="deletePlayerGamesToo" type="checkbox">
+          <span>Also delete all games involving that player</span>
+        </label>
+
+        <div class="note">Deleting only from the players table removes them from active dropdowns. Deleting games too fully cleans up standings and history.</div>
+
+        <div style="margin-top:12px;">
+          <div class="small" style="margin-bottom:6px;">Known names in system</div>
+          <div id="playerList" class="listBox"></div>
         </div>
       </div>
-
-      <div class="row two" style="margin-top:10px;">
-        <div>
-          <label for="deletePlayerSelect">Delete Player / Cleanup Orphan</label>
-          <select id="deletePlayerSelect"></select>
-        </div>
-        <div style="display:flex;align-items:end;">
-          <button id="deletePlayerBtn" class="danger" style="width:100%;">Delete Selected Player</button>
-        </div>
-      </div>
-
-      <label class="checkboxRow">
-        <input id="deletePlayerGamesToo" type="checkbox">
-        <span>Also delete all games involving that player</span>
-      </label>
-
-      <div class="note">Deleting only from the players table removes them from active dropdowns. Deleting games too fully cleans up standings and history.</div>
-
-      <div style="margin-top:12px;">
-        <div class="small" style="margin-bottom:6px;">Known names in system</div>
-        <div id="playerList" class="listBox"></div>
-      </div>
-    </div>
+    </details>
 
     <div class="card" id="king"></div>
     <div class="card" id="potn"></div>
@@ -692,33 +892,14 @@ function computeStats(){
   return {stats, elo};
 }
 
-function renderStandings(){
-  const {stats, elo} = computeStats();
-  const rows = Object.entries(stats).sort((a,b)=>(elo[b[0]]||1000)-(elo[a[0]]||1000));
-
-  $("standings").innerHTML = `
-    <div class="cardTitle">Standings</div>
-    ${rows.length ? rows.map(([name,s], i) => {
-      const total = s.w + s.l;
-      const pct = total ? ((s.w/total)*100).toFixed(1) : "0.0";
-      return `
-        <div class="leader">
-          <div class="rank">${i+1}</div>
-          <div>
-            <div><b>${escapeHtml(name)}</b></div>
-            <div class="small">${s.w}-${s.l} • ${pct}% win</div>
-          </div>
-          <div><b>${Math.round(elo[name]||1000)}</b></div>
-        </div>
-      `;
-    }).join("") : `<div class="empty">No standings yet.</div>`}
-  `;
-}
-
-function renderKing(){
+function getKingData(){
   if(!games.length){
-    $("king").innerHTML = `<div class="cardTitle">King of the Table</div><div class="empty">No games yet.</div>`;
-    return;
+    return {
+      latestWinner:null,
+      currentStreak:0,
+      bestOwner:null,
+      best:0
+    };
   }
 
   let best = 0;
@@ -745,20 +926,111 @@ function renderKing(){
     else break;
   }
 
+  return {latestWinner, currentStreak, bestOwner, best};
+}
+
+function getPOTN(){
+  const recent = games.slice(0,20);
+  const score = {};
+  recent.forEach(g => {
+    if(!score[g.winner]) score[g.winner] = 0;
+    score[g.winner]++;
+  });
+  return Object.entries(score).sort((a,b)=>b[1]-a[1])[0];
+}
+
+function renderMobileStats(){
+  const {stats, elo} = computeStats();
+  const standings = Object.entries(stats).sort((a,b)=>(elo[b[0]]||1000)-(elo[a[0]]||1000));
+  const leader = standings[0];
+  const king = getKingData();
+  const potn = getPOTN();
+
+  $("mobileStats").innerHTML = `
+    <div class="cardTitle">Tonight at a Glance</div>
+    <div class="mobileScoreboard">
+      <div class="tile">
+        <div class="muted">Leader</div>
+        <div class="big">${leader ? escapeHtml(leader[0]) : "-"}</div>
+        <div class="small">${leader ? Math.round(elo[leader[0]]||1000) + " ELO" : "No games yet"}</div>
+      </div>
+      <div class="tile">
+        <div class="muted">Current King</div>
+        <div class="big">${king.latestWinner ? "👑 " + escapeHtml(king.latestWinner) : "-"}</div>
+        <div class="small">${king.currentStreak ? "🔥 " + king.currentStreak + " straight" : "No streak yet"}</div>
+      </div>
+      <div class="tile wide">
+        <div class="muted">Player of the Night</div>
+        <div class="big">${potn ? "🏆 " + escapeHtml(potn[0]) : "-"}</div>
+        <div class="small">${potn ? potn[1] + " win(s) in last 20 games" : "No recent games yet"}</div>
+      </div>
+    </div>
+
+    <div class="tile">
+      <div class="muted" style="margin-bottom:6px;">Top Standings</div>
+      ${standings.length ? standings.slice(0,5).map(([name,s], i) => {
+        const total = s.w + s.l;
+        const pct = total ? ((s.w/total)*100).toFixed(0) : "0";
+        return `
+          <div class="compactLeader">
+            <div class="rank">${i+1}</div>
+            <div>
+              <b>${escapeHtml(name)}</b>
+              <div class="small">${s.w}-${s.l} • ${pct}%</div>
+            </div>
+            <div><b>${Math.round(elo[name]||1000)}</b></div>
+          </div>
+        `;
+      }).join("") : `<div class="empty">No standings yet.</div>`}
+    </div>
+  `;
+}
+
+function renderStandings(){
+  const {stats, elo} = computeStats();
+  const rows = Object.entries(stats).sort((a,b)=>(elo[b[0]]||1000)-(elo[a[0]]||1000));
+
+  $("standings").innerHTML = `
+    <div class="cardTitle">Standings</div>
+    ${rows.length ? rows.map(([name,s], i) => {
+      const total = s.w + s.l;
+      const pct = total ? ((s.w/total)*100).toFixed(1) : "0.0";
+      return `
+        <div class="leader">
+          <div class="rank">${i+1}</div>
+          <div>
+            <div><b>${escapeHtml(name)}</b></div>
+            <div class="small">${s.w}-${s.l} • ${pct}% win</div>
+          </div>
+          <div><b>${Math.round(elo[name]||1000)}</b></div>
+        </div>
+      `;
+    }).join("") : `<div class="empty">No standings yet.</div>`}
+  `;
+}
+
+function renderKing(){
+  const k = getKingData();
+
+  if(!k.latestWinner){
+    $("king").innerHTML = `<div class="cardTitle">King of the Table</div><div class="empty">No games yet.</div>`;
+    return;
+  }
+
   $("king").innerHTML = `
     <div class="cardTitle">King of the Table</div>
     <div class="kpi">
       <div class="tile">
         <div class="muted">Current King</div>
-        <div class="big">👑 ${escapeHtml(latestWinner)}</div>
+        <div class="big">👑 ${escapeHtml(k.latestWinner)}</div>
       </div>
       <div class="tile">
         <div class="muted">Current Streak</div>
-        <div class="big">🔥 ${currentStreak}</div>
+        <div class="big">🔥 ${k.currentStreak}</div>
       </div>
       <div class="tile">
         <div class="muted">Best Streak</div>
-        <div class="big">🏆 ${escapeHtml(bestOwner || "-")} • ${best}</div>
+        <div class="big">🏆 ${escapeHtml(k.bestOwner || "-")} • ${k.best}</div>
       </div>
     </div>
   `;
@@ -788,13 +1060,7 @@ function renderPlayerStats(){
 }
 
 function renderPOTN(){
-  const recent = games.slice(0,20);
-  const score = {};
-  recent.forEach(g => {
-    if(!score[g.winner]) score[g.winner] = 0;
-    score[g.winner]++;
-  });
-  const best = Object.entries(score).sort((a,b)=>b[1]-a[1])[0];
+  const best = getPOTN();
 
   $("potn").innerHTML = `
     <div class="cardTitle">Player of the Night</div>
@@ -853,7 +1119,7 @@ function renderHistory(){
             </div>
             <div style="margin-top:8px;">${modePill} ${typePill}</div>
           </div>
-          <div><button class="danger" onclick="deleteGame('${g.id}')">Delete</button></div>
+          <div class="historyDelete"><button class="danger" onclick="deleteGame('${g.id}')">Delete</button></div>
         </div>
       </div>
     `;
@@ -866,33 +1132,38 @@ function renderRules(){
 
     <details open>
       <summary>🏠 House Rules</summary>
-      <ul>
-        <li>Table is open after the break.</li>
-        <li>No call shots. Slop counts.</li>
-        <li>First player to legally pocket the 8 wins.</li>
-        <li>Scratch on the 8 is a loss.</li>
-        <li>Making the 8 early is a loss.</li>
-        <li>Keep it simple and casual.</li>
-      </ul>
+      <div class="detailsBody">
+        <ul>
+          <li>Table is open after the break.</li>
+          <li>No call shots. Slop counts.</li>
+          <li>First player to legally pocket the 8 wins.</li>
+          <li>Scratch on the 8 is a loss.</li>
+          <li>Making the 8 early is a loss.</li>
+          <li>Keep it simple and casual.</li>
+        </ul>
+      </div>
     </details>
 
     <details>
       <summary>🎱 APA 8-Ball Style</summary>
-      <ul>
-        <li>Table is open after the break.</li>
-        <li>Call your intended shot.</li>
-        <li>Once groups are set, you must hit your group first.</li>
-        <li>Clear your group before shooting the 8.</li>
-        <li>Scratch on the 8 is a loss.</li>
-        <li>Making the 8 early is a loss.</li>
-        <li>Opponent scratch / opponent early 8 can be logged explicitly.</li>
-      </ul>
+      <div class="detailsBody">
+        <ul>
+          <li>Table is open after the break.</li>
+          <li>Call your intended shot.</li>
+          <li>Once groups are set, you must hit your group first.</li>
+          <li>Clear your group before shooting the 8.</li>
+          <li>Scratch on the 8 is a loss.</li>
+          <li>Making the 8 early is a loss.</li>
+          <li>Opponent scratch / opponent early 8 can be logged explicitly.</li>
+        </ul>
+      </div>
     </details>
   `;
 }
 
 function renderAll(){
   renderPlayers();
+  renderMobileStats();
   renderStandings();
   renderKing();
   renderPlayerStats();
