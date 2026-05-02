@@ -35,13 +35,14 @@ html,body{
   background:linear-gradient(180deg,var(--bg),#05060a 78%);
   color:var(--text);
   font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;
+  scroll-behavior:smooth;
 }
 
 body{
   max-width:1100px;
   margin:auto;
   padding:12px;
-  padding-bottom:90px;
+  padding-bottom:96px;
 }
 
 h1,h2,h3{margin:0}
@@ -60,7 +61,7 @@ button{
 }
 
 button:hover{transform:translateY(-1px)}
-button:active{transform:translateY(0)}
+button:active{transform:translateY(0) scale(.99)}
 
 button.secondary{background:#283042}
 button.ghost{
@@ -153,9 +154,7 @@ label{
 }
 
 @media(min-width:980px){
-  .grid.two{
-    grid-template-columns:1.22fr .88fr;
-  }
+  .grid.two{grid-template-columns:1.22fr .88fr}
 }
 
 .card{
@@ -171,6 +170,23 @@ label{
   font-size:20px;
   font-weight:950;
   margin-bottom:12px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.tipBtn{
+  width:24px;
+  height:24px;
+  min-height:24px;
+  padding:0;
+  border-radius:999px;
+  background:#263044;
+  color:#d8b4fe;
+  font-size:13px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
 }
 
 .row{
@@ -191,17 +207,27 @@ label{
   gap:10px;
 }
 
-.toolbar button{
-  flex:1 1 auto;
-}
+.toolbar button{flex:1 1 auto}
 
 .modeBtn.active{
   box-shadow:0 0 0 2px rgba(168,85,247,.35) inset, 0 0 18px rgba(124,58,237,.35);
 }
 
 .winBtn{
-  min-height:60px;
+  min-height:64px;
   font-size:17px;
+  position:relative;
+  overflow:hidden;
+}
+
+.winBtn.flashWin{
+  animation:winPulse .75s ease;
+}
+
+@keyframes winPulse{
+  0%{box-shadow:0 0 0 rgba(251,191,36,0); transform:scale(1)}
+  50%{box-shadow:0 0 34px rgba(251,191,36,.65); transform:scale(1.025)}
+  100%{box-shadow:0 0 0 rgba(251,191,36,0); transform:scale(1)}
 }
 
 .note{
@@ -227,10 +253,53 @@ label{
   background:#111522;
 }
 
+.tile.kingGlow{
+  animation:crownGlow 1.1s ease;
+}
+
+@keyframes crownGlow{
+  0%{box-shadow:0 0 0 rgba(251,191,36,0)}
+  50%{box-shadow:0 0 28px rgba(251,191,36,.55)}
+  100%{box-shadow:0 0 0 rgba(251,191,36,0)}
+}
+
 .tile .big{
   margin-top:4px;
   font-size:23px;
   font-weight:950;
+}
+
+.lastGameHero{
+  border:1px solid rgba(251,191,36,.35);
+  border-radius:18px;
+  padding:13px;
+  background:linear-gradient(135deg,rgba(124,58,237,.25),rgba(251,191,36,.10));
+  margin-bottom:14px;
+}
+
+.lastGameHero .headline{
+  font-size:18px;
+  font-weight:950;
+}
+
+.achievementRow{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-top:10px;
+}
+
+.badge{
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  padding:6px 9px;
+  border-radius:999px;
+  border:1px solid #3b4560;
+  background:#111827;
+  color:#eef2ff;
+  font-size:11px;
+  font-weight:900;
 }
 
 .mobileScoreboard{
@@ -240,21 +309,12 @@ label{
   margin-bottom:14px;
 }
 
-.mobileScoreboard .tile{
-  min-height:86px;
-}
-
-.mobileScoreboard .wide{
-  grid-column:1 / -1;
-}
+.mobileScoreboard .tile{min-height:86px}
+.mobileScoreboard .wide{grid-column:1 / -1}
 
 @media(min-width:900px){
-  .mobileScoreboard{
-    grid-template-columns:1fr 1fr 1fr;
-  }
-  .mobileScoreboard .wide{
-    grid-column:auto;
-  }
+  .mobileScoreboard{grid-template-columns:1fr 1fr 1fr}
+  .mobileScoreboard .wide{grid-column:auto}
 }
 
 .leader{
@@ -319,21 +379,12 @@ label{
   align-items:start;
 }
 
-.historyDelete{
-  grid-column:1 / -1;
-}
-
-.historyDelete button{
-  width:100%;
-}
+.historyDelete{grid-column:1 / -1}
+.historyDelete button{width:100%}
 
 @media(min-width:640px){
-  .historyTop{
-    grid-template-columns:auto 1fr auto;
-  }
-  .historyDelete{
-    grid-column:auto;
-  }
+  .historyTop{grid-template-columns:auto 1fr auto}
+  .historyDelete{grid-column:auto}
 }
 
 .pill{
@@ -412,18 +463,14 @@ summary::after{
   transition:.15s ease;
 }
 
-details[open] summary::after{
-  transform:rotate(180deg);
-}
+details[open] summary::after{transform:rotate(180deg)}
 
 .detailsBody{
   border-top:1px solid var(--line);
   padding:14px;
 }
 
-.collapsibleCard{
-  padding:0;
-}
+.collapsibleCard{padding:0}
 
 .collapsibleCard summary{
   background:linear-gradient(180deg,var(--card),var(--card2));
@@ -477,17 +524,7 @@ ul{
   }
 }
 
-.mobilePrimaryStats{
-  display:block;
-}
-
-.desktopOnly{
-  display:none;
-}
-
-@media(min-width:900px){
-  .desktopOnly{display:block}
-}
+.mobilePrimaryStats{display:block}
 
 .statusBar{
   position:fixed;
@@ -511,10 +548,120 @@ ul{
   }
   body{padding-bottom:12px}
 }
+
+.toast{
+  position:fixed;
+  left:50%;
+  bottom:76px;
+  transform:translateX(-50%) translateY(20px);
+  z-index:60;
+  width:min(94vw,520px);
+  border:1px solid rgba(251,191,36,.35);
+  border-radius:20px;
+  padding:14px;
+  background:linear-gradient(135deg,rgba(17,24,39,.98),rgba(46,16,101,.96));
+  color:white;
+  box-shadow:0 18px 40px rgba(0,0,0,.42);
+  opacity:0;
+  pointer-events:none;
+  transition:.25s ease;
+}
+
+.toast.show{
+  opacity:1;
+  transform:translateX(-50%) translateY(0);
+}
+
+.toastTitle{
+  font-weight:950;
+  font-size:18px;
+}
+
+.toastMsg{
+  margin-top:4px;
+  font-size:13px;
+  color:#d1d5db;
+}
+
+.confettiPiece{
+  position:fixed;
+  top:-20px;
+  z-index:70;
+  pointer-events:none;
+  font-size:20px;
+  animation:fall linear forwards;
+}
+
+@keyframes fall{
+  to{
+    transform:translateY(110vh) rotate(720deg);
+    opacity:.15;
+  }
+}
+
+.modalBackdrop{
+  position:fixed;
+  inset:0;
+  z-index:80;
+  background:rgba(0,0,0,.62);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:16px;
+}
+
+.modalBackdrop.show{display:flex}
+
+.modalBox{
+  width:min(94vw,520px);
+  border:1px solid var(--line);
+  border-radius:22px;
+  background:linear-gradient(180deg,#151927,#0f1220);
+  box-shadow:0 24px 70px rgba(0,0,0,.55);
+  padding:16px;
+}
+
+.modalTitle{
+  font-size:21px;
+  font-weight:950;
+  margin-bottom:8px;
+}
+
+.modalText{
+  color:#d1d5db;
+  font-size:14px;
+  line-height:1.45;
+  white-space:pre-wrap;
+}
+
+.modalActions{
+  margin-top:14px;
+  display:flex;
+  gap:10px;
+}
+
+.modalActions button{flex:1}
 </style>
 </head>
 
 <body>
+
+<div id="confettiLayer"></div>
+
+<div class="toast" id="toast">
+  <div class="toastTitle" id="toastTitle"></div>
+  <div class="toastMsg" id="toastMsg"></div>
+</div>
+
+<div class="modalBackdrop" id="tipModal">
+  <div class="modalBox">
+    <div class="modalTitle" id="tipTitle"></div>
+    <div class="modalText" id="tipText"></div>
+    <div class="modalActions">
+      <button class="secondary" id="closeTipBtn">Got it</button>
+    </div>
+  </div>
+</div>
 
 <div class="stickyHeader">
   <div class="brand">
@@ -540,7 +687,12 @@ ul{
 <div class="grid two">
   <div>
     <div class="card" id="logCard">
-      <div class="cardTitle">Log a Match</div>
+      <div class="cardTitle">
+        Log a Match
+        <button class="tipBtn" onclick="showTip('Log a Match','Pick two players, then tap the winner. House mode allows quick logging. APA mode requires a win type so the result is clearer later.')">?</button>
+      </div>
+
+      <div id="lastGameHero"></div>
 
       <div class="row two">
         <div>
@@ -587,6 +739,7 @@ ul{
       <div class="toolbar" style="margin-top:12px;">
         <button id="modeBtn" class="modeBtn active">🏠 House Mode</button>
         <button id="kingModeBtn" class="secondary">👑 King OFF</button>
+        <button id="shareNightBtn" class="ghost">Share Recap</button>
       </div>
 
       <div class="note">APA mode requires a win type. Scratch on the 8 records as a loss for the shooter.</div>
@@ -723,6 +876,7 @@ let players = [];
 let games = [];
 let mode = "house";
 let kingMode = false;
+let lastLoggedWinner = null;
 const K = 20;
 
 const $ = (id) => document.getElementById(id);
@@ -741,6 +895,38 @@ function setStatus(msg, isError=false){
   $("status").innerHTML = `<span class="${isError ? 'warn' : 'good'}">${escapeHtml(msg)}</span>`;
 }
 
+function showToast(title, msg){
+  $("toastTitle").textContent = title;
+  $("toastMsg").textContent = msg;
+  $("toast").classList.add("show");
+  setTimeout(() => $("toast").classList.remove("show"), 3200);
+}
+
+function burstConfetti(){
+  const icons = ["👑","🎱","🔥","🏆","✨","💜"];
+  for(let i=0;i<28;i++){
+    const piece = document.createElement("div");
+    piece.className = "confettiPiece";
+    piece.textContent = icons[Math.floor(Math.random()*icons.length)];
+    piece.style.left = Math.random()*100 + "vw";
+    piece.style.animationDuration = (1.8 + Math.random()*1.8) + "s";
+    piece.style.fontSize = (16 + Math.random()*14) + "px";
+    document.body.appendChild(piece);
+    setTimeout(() => piece.remove(), 3800);
+  }
+}
+
+function showTip(title, text){
+  $("tipTitle").textContent = title;
+  $("tipText").textContent = text;
+  $("tipModal").classList.add("show");
+}
+window.showTip = showTip;
+
+function closeTip(){
+  $("tipModal").classList.remove("show");
+}
+
 function toLocalInputValue(d = new Date()){
   const pad = n => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
@@ -757,6 +943,16 @@ function prettyDate(dateStr){
     hour:"numeric",
     minute:"2-digit"
   });
+}
+
+function relativeTime(dateStr){
+  const d = new Date(dateStr);
+  if(isNaN(d)) return "";
+  const diff = Math.floor((Date.now() - d.getTime()) / 1000);
+  if(diff < 60) return "just now";
+  if(diff < 3600) return `${Math.floor(diff/60)} min ago`;
+  if(diff < 86400) return `${Math.floor(diff/3600)} hr ago`;
+  return `${Math.floor(diff/86400)} day(s) ago`;
 }
 
 function getAllKnownPlayers(){
@@ -894,12 +1090,7 @@ function computeStats(){
 
 function getKingData(){
   if(!games.length){
-    return {
-      latestWinner:null,
-      currentStreak:0,
-      bestOwner:null,
-      best:0
-    };
+    return {latestWinner:null,currentStreak:0,bestOwner:null,best:0};
   }
 
   let best = 0;
@@ -939,6 +1130,51 @@ function getPOTN(){
   return Object.entries(score).sort((a,b)=>b[1]-a[1])[0];
 }
 
+function getAchievements(name){
+  const {stats} = computeStats();
+  const king = getKingData();
+  const s = stats[name];
+  if(!s) return [];
+
+  const total = s.w + s.l;
+  const pct = total ? s.w / total : 0;
+  const badges = [];
+
+  if(king.latestWinner === name) badges.push("👑 Current King");
+  if(king.currentStreak >= 3 && king.latestWinner === name) badges.push("🔥 Hot Hand");
+  if(king.bestOwner === name && king.best >= 3) badges.push("🏆 Best Streak");
+  if(total >= 5 && pct >= .75) badges.push("🎯 Sharpshooter");
+  if(s.history.slice(-3).every(x => x === 1) && s.history.length >= 3) badges.push("⚡ 3 Straight");
+  if(s.history.slice(-3).every(x => x === 0) && s.history.length >= 3) badges.push("🧊 Cold Spell");
+
+  return badges;
+}
+
+function renderLastGameHero(){
+  if(!games.length){
+    $("lastGameHero").innerHTML = "";
+    return;
+  }
+
+  const g = games[0];
+  const loser = g.winner === g.player1 ? g.player2 : g.player1;
+  const king = getKingData();
+  const badges = getAchievements(g.winner).slice(0,3);
+
+  $("lastGameHero").innerHTML = `
+    <div class="lastGameHero">
+      <div class="headline">Last Game: 👑 ${escapeHtml(g.winner)} beat ${escapeHtml(loser)}</div>
+      <div class="small" style="margin-top:5px;">
+        ${prettyDate(g.date)} • ${relativeTime(g.date)} • ${escapeHtml(g.win_type || "Quick win")}
+      </div>
+      <div class="achievementRow">
+        ${badges.map(b => `<span class="badge">${escapeHtml(b)}</span>`).join("")}
+        ${king.latestWinner === g.winner ? `<span class="badge">🔥 ${king.currentStreak} straight</span>` : ""}
+      </div>
+    </div>
+  `;
+}
+
 function renderMobileStats(){
   const {stats, elo} = computeStats();
   const standings = Object.entries(stats).sort((a,b)=>(elo[b[0]]||1000)-(elo[a[0]]||1000));
@@ -947,14 +1183,17 @@ function renderMobileStats(){
   const potn = getPOTN();
 
   $("mobileStats").innerHTML = `
-    <div class="cardTitle">Tonight at a Glance</div>
+    <div class="cardTitle">
+      Tonight at a Glance
+      <button class="tipBtn" onclick="showTip('Tonight at a Glance','This is the phone-friendly scoreboard. It shows the current leader, current King, Player of the Night, and top standings without making everyone dig through the full stats.')">?</button>
+    </div>
     <div class="mobileScoreboard">
       <div class="tile">
         <div class="muted">Leader</div>
         <div class="big">${leader ? escapeHtml(leader[0]) : "-"}</div>
         <div class="small">${leader ? Math.round(elo[leader[0]]||1000) + " ELO" : "No games yet"}</div>
       </div>
-      <div class="tile">
+      <div class="tile ${lastLoggedWinner && king.latestWinner === lastLoggedWinner ? "kingGlow" : ""}">
         <div class="muted">Current King</div>
         <div class="big">${king.latestWinner ? "👑 " + escapeHtml(king.latestWinner) : "-"}</div>
         <div class="small">${king.currentStreak ? "🔥 " + king.currentStreak + " straight" : "No streak yet"}</div>
@@ -971,12 +1210,13 @@ function renderMobileStats(){
       ${standings.length ? standings.slice(0,5).map(([name,s], i) => {
         const total = s.w + s.l;
         const pct = total ? ((s.w/total)*100).toFixed(0) : "0";
+        const badges = getAchievements(name).slice(0,2);
         return `
           <div class="compactLeader">
             <div class="rank">${i+1}</div>
             <div>
               <b>${escapeHtml(name)}</b>
-              <div class="small">${s.w}-${s.l} • ${pct}%</div>
+              <div class="small">${s.w}-${s.l} • ${pct}% ${badges.length ? "• " + badges.join(" ") : ""}</div>
             </div>
             <div><b>${Math.round(elo[name]||1000)}</b></div>
           </div>
@@ -991,7 +1231,10 @@ function renderStandings(){
   const rows = Object.entries(stats).sort((a,b)=>(elo[b[0]]||1000)-(elo[a[0]]||1000));
 
   $("standings").innerHTML = `
-    <div class="cardTitle">Standings</div>
+    <div class="cardTitle">
+      Standings
+      <button class="tipBtn" onclick="showTip('ELO Standings','ELO is a simple rating system. Beating stronger players gives more rating movement. It is just for fun and bragging rights.')">?</button>
+    </div>
     ${rows.length ? rows.map(([name,s], i) => {
       const total = s.w + s.l;
       const pct = total ? ((s.w/total)*100).toFixed(1) : "0.0";
@@ -1001,6 +1244,7 @@ function renderStandings(){
           <div>
             <div><b>${escapeHtml(name)}</b></div>
             <div class="small">${s.w}-${s.l} • ${pct}% win</div>
+            <div class="achievementRow">${getAchievements(name).map(b => `<span class="badge">${escapeHtml(b)}</span>`).join("")}</div>
           </div>
           <div><b>${Math.round(elo[name]||1000)}</b></div>
         </div>
@@ -1018,9 +1262,12 @@ function renderKing(){
   }
 
   $("king").innerHTML = `
-    <div class="cardTitle">King of the Table</div>
+    <div class="cardTitle">
+      King of the Table
+      <button class="tipBtn" onclick="showTip('King Mode','King mode is for winner-stays-on play. After logging a game, the winner stays in Player 1 so the next challenger can be selected quickly.')">?</button>
+    </div>
     <div class="kpi">
-      <div class="tile">
+      <div class="tile ${lastLoggedWinner === k.latestWinner ? "kingGlow" : ""}">
         <div class="muted">Current King</div>
         <div class="big">👑 ${escapeHtml(k.latestWinner)}</div>
       </div>
@@ -1046,6 +1293,7 @@ function renderPlayerStats(){
       const total = s.w + s.l;
       const pct = total ? ((s.w/total)*100).toFixed(1) : "0.0";
       const last10 = s.history.slice(-10);
+      const badges = getAchievements(name);
       return `
         <div class="statCard">
           <div><b>${escapeHtml(name)}</b></div>
@@ -1053,6 +1301,7 @@ function renderPlayerStats(){
             Wins: ${s.w} • Losses: ${s.l} • Win%: ${pct}% • ELO: ${Math.round(elo[name]||1000)}
           </div>
           <div style="margin-top:8px;">${last10.map(x => x ? "🟩" : "⬛").join("") || "<span class='small'>No recent form yet.</span>"}</div>
+          <div class="achievementRow">${badges.map(b => `<span class="badge">${escapeHtml(b)}</span>`).join("")}</div>
         </div>
       `;
     }).join("") : `<div class="empty">No player stats yet.</div>`}
@@ -1163,6 +1412,7 @@ function renderRules(){
 
 function renderAll(){
   renderPlayers();
+  renderLastGameHero();
   renderMobileStats();
   renderStandings();
   renderKing();
@@ -1174,10 +1424,22 @@ function renderAll(){
   updateButtons();
 }
 
+function makeWinMessage(winner, loser){
+  const king = getKingData();
+  if(king.latestWinner === winner && king.currentStreak >= 3){
+    return `👑 ${winner} stays King with ${king.currentStreak} straight wins.`;
+  }
+  if(king.latestWinner === winner){
+    return `👑 ${winner} is King of the Table.`;
+  }
+  return `${winner} beat ${loser}.`;
+}
+
 async function logWin(which){
   const p1 = $("player1").value;
   const p2 = $("player2").value;
   let winner = which === 1 ? p1 : p2;
+  const originalWinner = winner;
   const loser = which === 1 ? p2 : p1;
   const selectedMode = mode;
   const type = $("winType").value;
@@ -1217,11 +1479,25 @@ async function logWin(which){
     return;
   }
 
+  lastLoggedWinner = winner;
+  if(which === 1) $("p1WinBtn").classList.add("flashWin");
+  if(which === 2) $("p2WinBtn").classList.add("flashWin");
+
+  setTimeout(() => {
+    $("p1WinBtn").classList.remove("flashWin");
+    $("p2WinBtn").classList.remove("flashWin");
+  }, 850);
+
   if(kingMode) $("player1").value = winner;
 
   $("winType").value = "";
   $("gameDateNow").value = toLocalInputValue(new Date());
+
   await loadData();
+
+  const finalLoser = winner === p1 ? p2 : p1;
+  burstConfetti();
+  showToast("Game logged", makeWinMessage(winner, finalLoser));
   setStatus(`Logged win for ${winner}.`);
 }
 
@@ -1271,8 +1547,10 @@ async function addManualGame(){
     return;
   }
 
+  lastLoggedWinner = winner;
   $("manualWinType").value = "";
   await loadData();
+  showToast("Manual game added", `${winner} was added to the record.`);
   setStatus(`Manual game added for ${winner}.`);
 }
 
@@ -1295,6 +1573,7 @@ async function addPlayer(){
 
   $("newPlayer").value = "";
   await loadData();
+  showToast("Player added", `${name} joined Table Kings.`);
   setStatus(`Added player ${name}.`);
 }
 
@@ -1400,6 +1679,52 @@ async function deleteLastGame(){
   setStatus("Last game deleted.");
 }
 
+function buildNightRecap(){
+  if(!games.length) return "No Table Kings games logged yet.";
+
+  const {stats, elo} = computeStats();
+  const king = getKingData();
+  const potn = getPOTN();
+  const leader = Object.entries(stats).sort((a,b)=>(elo[b[0]]||1000)-(elo[a[0]]||1000))[0];
+
+  const recent = games.slice(0,10);
+  const lines = [];
+  lines.push("👑 Table Kings Recap");
+  lines.push("");
+  if(leader) lines.push(`Top Standings: ${leader[0]} (${Math.round(elo[leader[0]]||1000)} ELO)`);
+  if(king.latestWinner) lines.push(`Current King: ${king.latestWinner} (${king.currentStreak} straight)`);
+  if(potn) lines.push(`Player of the Night: ${potn[0]} with ${potn[1]} win(s) in the last 20 games`);
+  lines.push("");
+  lines.push("Recent Games:");
+  recent.forEach(g => {
+    const loser = g.winner === g.player1 ? g.player2 : g.player1;
+    lines.push(`- ${g.winner} beat ${loser}${g.win_type ? " (" + g.win_type + ")" : ""}`);
+  });
+
+  return lines.join("\n");
+}
+
+async function shareNightRecap(){
+  const text = buildNightRecap();
+
+  if(navigator.share){
+    try{
+      await navigator.share({
+        title:"Table Kings Recap",
+        text
+      });
+      return;
+    }catch(e){}
+  }
+
+  try{
+    await navigator.clipboard.writeText(text);
+    showToast("Recap copied", "Paste it into a text, group chat, or notes.");
+  }catch(e){
+    showTip("Table Kings Recap", text);
+  }
+}
+
 $("player1").onchange = updateButtons;
 $("player2").onchange = updateButtons;
 
@@ -1417,6 +1742,7 @@ $("modeSelectNow").onchange = () => {
 $("kingModeBtn").onclick = () => {
   kingMode = !kingMode;
   $("kingModeBtn").textContent = `👑 King ${kingMode ? "ON" : "OFF"}`;
+  showToast("King Mode", kingMode ? "Winner stays in Player 1 after each game." : "King Mode turned off.");
 };
 
 $("addPlayerBtn").onclick = addPlayer;
@@ -1427,6 +1753,11 @@ $("deleteLastBtn").onclick = deleteLastGame;
 $("clearSelectionsBtn").onclick = clearSelections;
 $("p1WinBtn").onclick = () => logWin(1);
 $("p2WinBtn").onclick = () => logWin(2);
+$("shareNightBtn").onclick = shareNightRecap;
+$("closeTipBtn").onclick = closeTip;
+$("tipModal").onclick = (e) => {
+  if(e.target.id === "tipModal") closeTip();
+};
 
 loadData();
 </script>
