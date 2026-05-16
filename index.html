@@ -641,6 +641,134 @@ ul{
 }
 
 .modalActions button{flex:1}
+
+/* Polished win/loss feedback */
+body.winCelebration::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  z-index:55;
+  pointer-events:none;
+  background:
+    radial-gradient(circle at center, rgba(251,191,36,.18), transparent 38%),
+    linear-gradient(180deg, rgba(124,58,237,.18), transparent 68%);
+  animation:screenWinFlash .75s ease forwards;
+}
+
+@keyframes screenWinFlash{
+  0%{opacity:0}
+  22%{opacity:1}
+  100%{opacity:0}
+}
+
+.winBtn.justWon{
+  animation:winPulse .75s ease, winnerLift .75s ease;
+}
+
+.winBtn.justLost{
+  animation:loserDip .45s ease;
+  filter:saturate(.82) brightness(.9);
+}
+
+@keyframes winnerLift{
+  0%{transform:scale(1)}
+  45%{transform:scale(1.035) translateY(-2px)}
+  100%{transform:scale(1)}
+}
+
+@keyframes loserDip{
+  0%{transform:scale(1)}
+  45%{transform:scale(.985); opacity:.74}
+  100%{transform:scale(1); opacity:1}
+}
+
+.winBtn::after{
+  content:"";
+  position:absolute;
+  inset:auto auto 50% 50%;
+  width:0;
+  height:0;
+  border-radius:999px;
+  background:rgba(255,255,255,.22);
+  transform:translate(-50%,50%);
+  opacity:0;
+}
+
+.winBtn.ripple::after{
+  animation:buttonRipple .55s ease;
+}
+
+@keyframes buttonRipple{
+  0%{width:0;height:0;opacity:.55}
+  100%{width:280px;height:280px;opacity:0}
+}
+
+.miniCelebration{
+  position:fixed;
+  left:50%;
+  top:42%;
+  transform:translate(-50%,-50%) scale(.92);
+  z-index:75;
+  pointer-events:none;
+  font-size:clamp(42px,14vw,86px);
+  font-weight:950;
+  opacity:0;
+  animation:miniPop .95s ease forwards;
+  text-shadow:0 10px 28px rgba(0,0,0,.5);
+}
+
+@keyframes miniPop{
+  0%{opacity:0; transform:translate(-50%,-50%) scale(.72)}
+  28%{opacity:1; transform:translate(-50%,-50%) scale(1.06)}
+  100%{opacity:0; transform:translate(-50%,-58%) scale(.96)}
+}
+
+.feedbackFooter{
+  margin:22px 0 4px;
+  text-align:center;
+  color:var(--muted);
+  font-size:12px;
+}
+
+.feedbackFooter button{
+  min-height:40px;
+  padding:9px 12px;
+  border-radius:999px;
+}
+
+textarea{
+  width:100%;
+  min-height:110px;
+  border:none;
+  border-radius:14px;
+  padding:12px 14px;
+  background:#f3f4f6;
+  color:#111827;
+  font:inherit;
+  resize:vertical;
+}
+
+.optionalHint{
+  margin-top:4px;
+  font-size:11px;
+  color:var(--muted);
+}
+
+@media(max-width:767px){
+  .mobileDefaultClosed:not([open]) .detailsBody{
+    display:none;
+  }
+  .desktopOpenHint{
+    display:none;
+  }
+}
+
+@media(min-width:768px){
+  .mobileOnlyHint{
+    display:none;
+  }
+}
+
 </style>
 </head>
 
@@ -659,6 +787,39 @@ ul{
     <div class="modalText" id="tipText"></div>
     <div class="modalActions">
       <button class="secondary" id="closeTipBtn">Got it</button>
+    </div>
+  </div>
+</div>
+
+<div class="modalBackdrop" id="feedbackModal">
+  <div class="modalBox">
+    <div class="modalTitle">💬 Table Kings Feedback</div>
+    <div class="modalText">Send an idea, bug, house rule thought, or quick note. This is just for family and guests.</div>
+
+    <div style="margin-top:12px;">
+      <label for="feedbackName">Name</label>
+      <input id="feedbackName" placeholder="Optional name">
+    </div>
+
+    <div style="margin-top:10px;">
+      <label for="feedbackType">Type</label>
+      <select id="feedbackType">
+        <option value="Feature idea">Feature idea</option>
+        <option value="Bug">Bug</option>
+        <option value="House rule idea">House rule idea</option>
+        <option value="Stats idea">Stats idea</option>
+        <option value="Other">Other</option>
+      </select>
+    </div>
+
+    <div style="margin-top:10px;">
+      <label for="feedbackText">Feedback</label>
+      <textarea id="feedbackText" placeholder="What should we add, fix, or improve?"></textarea>
+    </div>
+
+    <div class="modalActions">
+      <button class="secondary" id="closeFeedbackBtn">Cancel</button>
+      <button id="sendFeedbackBtn">Send Feedback</button>
     </div>
   </div>
 </div>
@@ -817,17 +978,25 @@ ul{
       </div>
     </details>
 
-    <div class="card" id="rules"></div>
+    <details class="card collapsibleCard mobileDefaultClosed" id="rulesWrap">
+      <summary>Rules <span class="small mobileOnlyHint">tap to expand</span></summary>
+      <div class="detailsBody" id="rules"></div>
+    </details>
   </div>
 
   <div>
     <details class="card collapsibleCard" id="playersWrap">
       <summary>Player Management</summary>
       <div class="detailsBody">
-        <div class="row two">
+        <div class="row three">
           <div>
             <label for="newPlayer">Add Player</label>
             <input id="newPlayer" placeholder="Player name">
+          </div>
+          <div>
+            <label for="newPlayerPhone">Phone Number <span class="muted">(optional)</span></label>
+            <input id="newPlayerPhone" type="tel" inputmode="tel" placeholder="Optional phone">
+            <div class="optionalHint">Stored only for app/family use.</div>
           </div>
           <div style="display:flex;align-items:end;">
             <button id="addPlayerBtn" style="width:100%;">Add Player</button>
@@ -859,11 +1028,31 @@ ul{
     </details>
 
     <div class="card" id="king"></div>
-    <div class="card" id="potn"></div>
-    <div class="card" id="standings"></div>
-    <div class="card" id="playerStats"></div>
-    <div class="card" id="h2hFull"></div>
+    <details class="card collapsibleCard mobileDefaultClosed" id="potnWrap">
+      <summary>Player of the Night <span class="small mobileOnlyHint">tap to expand</span></summary>
+      <div class="detailsBody" id="potn"></div>
+    </details>
+
+    <details class="card collapsibleCard mobileDefaultClosed" id="standingsWrap">
+      <summary>Standings <span class="small mobileOnlyHint">tap to expand</span></summary>
+      <div class="detailsBody" id="standings"></div>
+    </details>
+
+    <details class="card collapsibleCard mobileDefaultClosed" id="playerStatsWrap">
+      <summary>Player Stats <span class="small mobileOnlyHint">tap to expand</span></summary>
+      <div class="detailsBody" id="playerStats"></div>
+    </details>
+
+    <details class="card collapsibleCard mobileDefaultClosed" id="h2hFullWrap">
+      <summary>Head to Head <span class="small mobileOnlyHint">tap to expand</span></summary>
+      <div class="detailsBody" id="h2hFull"></div>
+    </details>
   </div>
+</div>
+
+<div class="feedbackFooter">
+  <button class="ghost" id="openFeedbackBtn">💬 Feedback / Suggestions</button>
+  <div style="margin-top:8px;">Table Kings is built for family, guests, and friendly bragging rights.</div>
 </div>
 
 <script>
@@ -872,6 +1061,7 @@ const sb = supabase.createClient(
   "sb_publishable_nNpJJg1ZBcQSjbX1HhPeKg_5KeR8ngb"
 );
 
+let playerRows = [];
 let players = [];
 let games = [];
 let mode = "house";
@@ -914,6 +1104,45 @@ function burstConfetti(){
     document.body.appendChild(piece);
     setTimeout(() => piece.remove(), 3800);
   }
+}
+
+function screenWinFlash(){
+  document.body.classList.remove("winCelebration");
+  void document.body.offsetWidth;
+  document.body.classList.add("winCelebration");
+  setTimeout(() => document.body.classList.remove("winCelebration"), 850);
+}
+
+function miniPop(text="👑"){
+  const el = document.createElement("div");
+  el.className = "miniCelebration";
+  el.textContent = text;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 1100);
+}
+
+function animateWinButtons(which){
+  const winBtn = which === 1 ? $("p1WinBtn") : $("p2WinBtn");
+  const loseBtn = which === 1 ? $("p2WinBtn") : $("p1WinBtn");
+
+  [winBtn, loseBtn].forEach(btn => {
+    btn.classList.remove("flashWin","justWon","justLost","ripple");
+    void btn.offsetWidth;
+  });
+
+  winBtn.classList.add("flashWin","justWon","ripple");
+  loseBtn.classList.add("justLost");
+
+  setTimeout(() => {
+    winBtn.classList.remove("flashWin","justWon","ripple");
+    loseBtn.classList.remove("justLost");
+  }, 900);
+}
+
+function smartCelebrate(winner){
+  screenWinFlash();
+  miniPop("👑");
+  burstConfetti();
 }
 
 function showTip(title, text){
@@ -964,7 +1193,7 @@ function getAllKnownPlayers(){
 async function loadData(){
   setStatus("Loading...");
   const [{data:p, error:pe}, {data:g, error:ge}] = await Promise.all([
-    sb.from("players").select("name").order("name"),
+    sb.from("players").select("name, phone").order("name"),
     sb.from("games").select("*").order("date", {ascending:false})
   ]);
 
@@ -977,7 +1206,8 @@ async function loadData(){
     return;
   }
 
-  players = (p || []).map(x => x.name).filter(Boolean);
+  playerRows = p || [];
+  players = playerRows.map(x => x.name).filter(Boolean);
   games = g || [];
 
   renderAll();
@@ -1013,12 +1243,14 @@ function renderPlayers(){
 
   $("playerList").innerHTML = allPlayers.length ? allPlayers.map(name => {
     const inPlayers = players.includes(name);
+    const row = playerRows.find(p => p.name === name) || {};
+    const phone = row.phone ? ` • ${escapeHtml(row.phone)}` : "";
     const gameCount = games.filter(g => g.player1===name || g.player2===name).length;
     return `
       <div class="playerRow">
         <div>
           <div><b>${escapeHtml(name)}</b></div>
-          <div class="small">${inPlayers ? "Active player list" : "Games only / possible orphan"} • ${gameCount} game(s)</div>
+          <div class="small">${inPlayers ? "Active player list" : "Games only / possible orphan"} • ${gameCount} game(s)${phone}</div>
         </div>
         <div class="small">${inPlayers ? "player table" : "games only"}</div>
       </div>
@@ -1410,6 +1642,19 @@ function renderRules(){
   `;
 }
 
+function applyResponsiveOpenState(){
+  const mobile = window.matchMedia("(max-width: 767px)").matches;
+  ["rulesWrap","potnWrap","standingsWrap","playerStatsWrap","h2hFullWrap"].forEach(id => {
+    const el = $(id);
+    if(!el) return;
+    if(mobile){
+      el.removeAttribute("open");
+    }else{
+      el.setAttribute("open", "");
+    }
+  });
+}
+
 function renderAll(){
   renderPlayers();
   renderLastGameHero();
@@ -1480,23 +1725,19 @@ async function logWin(which){
   }
 
   lastLoggedWinner = winner;
-  if(which === 1) $("p1WinBtn").classList.add("flashWin");
-  if(which === 2) $("p2WinBtn").classList.add("flashWin");
-
-  setTimeout(() => {
-    $("p1WinBtn").classList.remove("flashWin");
-    $("p2WinBtn").classList.remove("flashWin");
-  }, 850);
+  animateWinButtons(which);
 
   if(kingMode) $("player1").value = winner;
 
   $("winType").value = "";
   $("gameDateNow").value = toLocalInputValue(new Date());
 
-  await loadData();
+  await applyResponsiveOpenState();
+window.addEventListener("resize", applyResponsiveOpenState);
+loadData();
 
   const finalLoser = winner === p1 ? p2 : p1;
-  burstConfetti();
+  smartCelebrate(winner);
   showToast("Game logged", makeWinMessage(winner, finalLoser));
   setStatus(`Logged win for ${winner}.`);
 }
@@ -1549,7 +1790,9 @@ async function addManualGame(){
 
   lastLoggedWinner = winner;
   $("manualWinType").value = "";
-  await loadData();
+  await applyResponsiveOpenState();
+window.addEventListener("resize", applyResponsiveOpenState);
+loadData();
   showToast("Manual game added", `${winner} was added to the record.`);
   setStatus(`Manual game added for ${winner}.`);
 }
@@ -1572,7 +1815,9 @@ async function addPlayer(){
   }
 
   $("newPlayer").value = "";
-  await loadData();
+  await applyResponsiveOpenState();
+window.addEventListener("resize", applyResponsiveOpenState);
+loadData();
   showToast("Player added", `${name} joined Table Kings.`);
   setStatus(`Added player ${name}.`);
 }
@@ -1607,13 +1852,17 @@ async function deleteSelectedPlayer(){
       const {error:gameError} = await sb.from("games").delete().in("id", ids);
       if(gameError){
         setStatus(`Player removed, but deleting games failed: ${gameError.message}`, true);
-        await loadData();
+        await applyResponsiveOpenState();
+window.addEventListener("resize", applyResponsiveOpenState);
+loadData();
         return;
       }
     }
   }
 
-  await loadData();
+  await applyResponsiveOpenState();
+window.addEventListener("resize", applyResponsiveOpenState);
+loadData();
   setStatus(deleteGamesToo
     ? `Deleted player ${name} and related games.`
     : `Deleted player ${name} from the players table.`
@@ -1630,7 +1879,9 @@ async function deleteGame(id){
     return;
   }
 
-  await loadData();
+  await applyResponsiveOpenState();
+window.addEventListener("resize", applyResponsiveOpenState);
+loadData();
   setStatus("Game deleted.");
 }
 window.deleteGame = deleteGame;
@@ -1650,7 +1901,9 @@ async function deleteSelectedGames(){
     return;
   }
 
-  await loadData();
+  await applyResponsiveOpenState();
+window.addEventListener("resize", applyResponsiveOpenState);
+loadData();
   setStatus(`Deleted ${ids.length} game(s).`);
 }
 
@@ -1675,7 +1928,9 @@ async function deleteLastGame(){
     return;
   }
 
-  await loadData();
+  await applyResponsiveOpenState();
+window.addEventListener("resize", applyResponsiveOpenState);
+loadData();
   setStatus("Last game deleted.");
 }
 
@@ -1702,6 +1957,54 @@ function buildNightRecap(){
   });
 
   return lines.join("\n");
+}
+
+function openFeedback(){
+  const p1 = $("player1").value || "";
+  $("feedbackName").value = p1;
+  $("feedbackText").value = "";
+  $("feedbackModal").classList.add("show");
+}
+
+function closeFeedback(){
+  $("feedbackModal").classList.remove("show");
+}
+
+async function sendFeedback(){
+  const name = $("feedbackName").value.trim() || null;
+  const type = $("feedbackType").value;
+  const message = $("feedbackText").value.trim();
+
+  if(!message){
+    setStatus("Enter feedback before sending.", true);
+    return;
+  }
+
+  const payload = {
+    name,
+    type,
+    message,
+    page: "Table Kings",
+    created_at: new Date().toISOString()
+  };
+
+  const {error} = await sb.from("feedback").insert(payload);
+  if(error){
+    const fallback = `Table Kings Feedback\n\nType: ${type}\nName: ${name || "Not provided"}\n\n${message}`;
+    try{
+      await navigator.clipboard.writeText(fallback);
+      closeFeedback();
+      showToast("Feedback copied", "The feedback table may not exist yet. I copied the note so you can paste/send it.");
+      setStatus("Feedback copied. Add the feedback SQL table when ready.", true);
+    }catch(e){
+      showTip("Feedback", fallback);
+    }
+    return;
+  }
+
+  closeFeedback();
+  showToast("Feedback sent", "Thanks — this helps make Table Kings better.");
+  setStatus("Feedback sent.");
 }
 
 async function shareNightRecap(){
@@ -1754,11 +2057,20 @@ $("clearSelectionsBtn").onclick = clearSelections;
 $("p1WinBtn").onclick = () => logWin(1);
 $("p2WinBtn").onclick = () => logWin(2);
 $("shareNightBtn").onclick = shareNightRecap;
+$("openFeedbackBtn").onclick = openFeedback;
+$("closeFeedbackBtn").onclick = closeFeedback;
+$("sendFeedbackBtn").onclick = sendFeedback;
 $("closeTipBtn").onclick = closeTip;
 $("tipModal").onclick = (e) => {
   if(e.target.id === "tipModal") closeTip();
 };
 
+$("feedbackModal").onclick = (e) => {
+  if(e.target.id === "feedbackModal") closeFeedback();
+};
+
+applyResponsiveOpenState();
+window.addEventListener("resize", applyResponsiveOpenState);
 loadData();
 </script>
 
