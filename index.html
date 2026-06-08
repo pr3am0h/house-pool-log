@@ -985,7 +985,7 @@ textarea{
   </div>
 
   <div>
-    <details class="card collapsibleCard" id="playersWrap">
+    <details class="card collapsibleCard" id="playersWrap" open>
       <summary>Player Management</summary>
       <div class="detailsBody">
         <div class="row three">
@@ -1192,8 +1192,9 @@ function getAllKnownPlayers(){
 
 async function loadData(){
   setStatus("Loading...");
+
   const [{data:p, error:pe}, {data:g, error:ge}] = await Promise.all([
-    sb.from("players").select("name, phone").order("name"),
+    sb.from("players").select("*").order("name"),
     sb.from("games").select("*").order("date", {ascending:false})
   ]);
 
@@ -1206,12 +1207,21 @@ async function loadData(){
     return;
   }
 
-  playerRows = p || [];
+  playerRows = (p || []).map(row => ({
+    ...row,
+    name: row.name,
+    phone: row.phone || ""
+  }));
   players = playerRows.map(x => x.name).filter(Boolean);
   games = g || [];
 
   renderAll();
   setStatus(`Loaded ${players.length} players and ${games.length} games.`);
+}
+
+async function refreshAfterDataChange(){
+  applyResponsiveOpenState();
+  await loadData();
 }
 
 function fillSelectWithPlayers(el, names, placeholder="Select player"){
@@ -1732,9 +1742,7 @@ async function logWin(which){
   $("winType").value = "";
   $("gameDateNow").value = toLocalInputValue(new Date());
 
-  await applyResponsiveOpenState();
-window.addEventListener("resize", applyResponsiveOpenState);
-loadData();
+  await refreshAfterDataChange();
 
   const finalLoser = winner === p1 ? p2 : p1;
   smartCelebrate(winner);
@@ -1790,34 +1798,43 @@ async function addManualGame(){
 
   lastLoggedWinner = winner;
   $("manualWinType").value = "";
-  await applyResponsiveOpenState();
-window.addEventListener("resize", applyResponsiveOpenState);
-loadData();
+  await refreshAfterDataChange();
   showToast("Manual game added", `${winner} was added to the record.`);
   setStatus(`Manual game added for ${winner}.`);
 }
 
 async function addPlayer(){
   const name = $("newPlayer").value.trim();
+  const phone = $("newPlayerPhone").value.trim();
+
   if(!name){
     setStatus("Enter a player name.", true);
     return;
   }
-  if(players.includes(name)){
+
+  const alreadyExists = players.some(p => p.toLowerCase() === name.toLowerCase());
+  if(alreadyExists){
     setStatus("That player already exists in the players table.", true);
     return;
   }
 
-  const {error} = await sb.from("players").insert({name});
+  const payload = phone ? {name, phone} : {name};
+  let {error} = await sb.from("players").insert(payload);
+
+  // If the Supabase table has not been updated with the optional phone column yet,
+  // still allow the player to be added by retrying with only the name.
+  if(error && phone && String(error.message || "").toLowerCase().includes("phone")){
+    ({error} = await sb.from("players").insert({name}));
+  }
+
   if(error){
     setStatus(`Could not add player: ${error.message}`, true);
     return;
   }
 
   $("newPlayer").value = "";
-  await applyResponsiveOpenState();
-window.addEventListener("resize", applyResponsiveOpenState);
-loadData();
+  $("newPlayerPhone").value = "";
+  await refreshAfterDataChange();
   showToast("Player added", `${name} joined Table Kings.`);
   setStatus(`Added player ${name}.`);
 }
@@ -1852,17 +1869,13 @@ async function deleteSelectedPlayer(){
       const {error:gameError} = await sb.from("games").delete().in("id", ids);
       if(gameError){
         setStatus(`Player removed, but deleting games failed: ${gameError.message}`, true);
-        await applyResponsiveOpenState();
-window.addEventListener("resize", applyResponsiveOpenState);
-loadData();
+        await refreshAfterDataChange();
         return;
       }
     }
   }
 
-  await applyResponsiveOpenState();
-window.addEventListener("resize", applyResponsiveOpenState);
-loadData();
+  await refreshAfterDataChange();
   setStatus(deleteGamesToo
     ? `Deleted player ${name} and related games.`
     : `Deleted player ${name} from the players table.`
@@ -1879,9 +1892,7 @@ async function deleteGame(id){
     return;
   }
 
-  await applyResponsiveOpenState();
-window.addEventListener("resize", applyResponsiveOpenState);
-loadData();
+  await refreshAfterDataChange();
   setStatus("Game deleted.");
 }
 window.deleteGame = deleteGame;
@@ -1901,9 +1912,7 @@ async function deleteSelectedGames(){
     return;
   }
 
-  await applyResponsiveOpenState();
-window.addEventListener("resize", applyResponsiveOpenState);
-loadData();
+  await refreshAfterDataChange();
   setStatus(`Deleted ${ids.length} game(s).`);
 }
 
@@ -1928,9 +1937,7 @@ async function deleteLastGame(){
     return;
   }
 
-  await applyResponsiveOpenState();
-window.addEventListener("resize", applyResponsiveOpenState);
-loadData();
+  await refreshAfterDataChange();
   setStatus("Last game deleted.");
 }
 
@@ -2061,6 +2068,12 @@ $("openFeedbackBtn").onclick = openFeedback;
 $("closeFeedbackBtn").onclick = closeFeedback;
 $("sendFeedbackBtn").onclick = sendFeedback;
 $("closeTipBtn").onclick = closeTip;
+$("newPlayer").addEventListener("keydown", (e) => {
+  if(e.key === "Enter") addPlayer();
+});
+$("newPlayerPhone").addEventListener("keydown", (e) => {
+  if(e.key === "Enter") addPlayer();
+});
 $("tipModal").onclick = (e) => {
   if(e.target.id === "tipModal") closeTip();
 };
